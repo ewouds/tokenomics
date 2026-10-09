@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Theme demo</title>
+<style>
+  :root{--ink:#0e0d0b;--ink2:#181612;--paper:#efe7d6;--dim:#8a8374;--hot:#ff5a1f;--save:#a8cf45;
+        --display:"Bahnschrift","Arial Narrow",sans-serif;--serif:Georgia,serif;--mono:Consolas,monospace}
+  *{box-sizing:border-box;margin:0}
+  body{background:#222;color:#ddd;font:14px var(--mono);padding:24px}
+  .bar{display:flex;flex-wrap:wrap;gap:18px;align-items:center;margin-bottom:20px}
+  .bar label{display:flex;gap:6px;align-items:center}
+  .bar input[type=color]{width:34px;height:26px;border:0;padding:0;background:none}
+  button{font:inherit;padding:6px 12px;background:#333;color:#ddd;border:1px solid #555;cursor:pointer}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(560px,1fr));gap:24px}
+  .frame{aspect-ratio:16/9;container-type:inline-size;background:var(--ink);color:var(--paper);position:relative;overflow:hidden}
+  .frame>div{position:absolute}
+  .tag{left:6cqw;top:5cqw;font:600 1.3cqw var(--mono);letter-spacing:.28em;color:var(--hot)}
+  h2{position:absolute;left:6cqw;top:9cqw;font:400 4.4cqw/1.05 var(--serif)}h2 em{color:var(--hot)}
+  .big{right:6cqw;top:6cqw;text-align:right;font:700 9cqw/1 var(--display)}
+  .big small{display:block;font:500 1.4cqw var(--mono);color:var(--dim)}
+  .cells{left:6cqw;top:24cqw;width:88cqw;display:flex;flex-wrap:wrap;gap:.25cqw}
+  .cells i{width:1.15cqw;height:1.15cqw;border-radius:.15cqw}
+  .key{left:6cqw;bottom:3cqw;font:1.3cqw var(--mono);color:var(--dim)}
+  .rc{left:6cqw;top:19cqw;width:32cqw;padding:2.4cqw;background:var(--paper);color:#1a1814;font:500 1.7cqw/1.7 var(--mono)}
+  .rc p{display:flex;justify-content:space-between}.rc .h{color:var(--hot);font-weight:700}
+  .score{right:6cqw;top:6cqw;font:700 10cqw/1 var(--display);text-align:right}
+  .delta{right:6cqw;top:17cqw;font:700 2.6cqw var(--mono);color:var(--save)}
+  .ans{left:6cqw;bottom:8cqw;width:56cqw;padding:1.6cqw 2cqw;background:var(--ink2);border-left:.5cqw solid var(--save);font:italic 2.4cqw var(--serif)}
+  .words{left:6cqw;top:8cqw;font:700 10cqw/1.04 var(--display);text-transform:uppercase}.words div:nth-child(2){color:var(--hot)}
+</style></head><body>
+<div class="bar">
+  <label>ink <input type="color" data-v="--ink" value="#0e0d0b"></label>
+  <label>paper <input type="color" data-v="--paper" value="#efe7d6"></label>
+  <label>accent <input type="color" data-v="--hot" value="#ff5a1f"></label>
+  <label>save <input type="color" data-v="--save" value="#a8cf45"></label>
+  <label>dim <input type="color" data-v="--dim" value="#8a8374"></label>
+  <button data-t="#0e0d0b,#efe7d6,#ff5a1f,#a8cf45,#8a8374">Ink + orange</button>
+  <button data-t="#f1ead9,#14213d,#1f4fff,#1a8a5a,#6b6a62">Cream + cobalt</button>
+  <button data-t="#10201c,#f2ead8,#ffb000,#7ee0a1,#7f9a90">Forest + amber</button>
+  <button data-t="#fbfaf6,#161616,#e4002b,#0a7f4f,#767676">Light + red</button>
+</div>
+<div class="grid">
+  <div class="frame"><div class="tag">02 &nbsp;ONE REQUEST</div><h2>What you typed is the<br><em>tip</em> of the request.</h2>
+    <div class="big">4,609<small>INPUT TOKENS</small></div><div class="cells" id="c1"></div><div class="key">1 square = 25 tokens</div></div>
+  <div class="frame"><div class="tag">03 &nbsp;CREDITS</div><h2>tokens × rate × model = <em>credits</em></h2>
+    <div class="rc"><p><span>INPUT</span><span>4,609 tok</span></p><p><span>OUTPUT</span><span>800 tok</span></p><p><span>RATE</span><span class="h">4×</span></p><p class="h"><span>TOTAL</span><span>7.81</span></p></div></div>
+  <div class="frame"><div class="tag">04 &nbsp;OPTIMISE</div><h2>Same answer.<br><em>Lighter</em> request.</h2>
+    <div class="score">1.82</div><div class="delta">−77%</div><div class="cells" id="c2" style="top:30cqw;width:56cqw"></div>
+    <div class="ans">Service restored. No data lost.</div></div>
+  <div class="frame"><div class="tag">05 &nbsp;TAKEAWAY</div><div class="words"><div>Send less.</div><div>Spend where</div><div>it matters.</div></div></div>
+</div>
+<script>
+  const L=["#d8ccb0","#b3a78b","#8c826d","#efe7d6"];
+  const fill=(id,counts)=>{const e=document.getElementById(id);
+    counts.forEach((p,i)=>{for(let j=0;j<p;j++){const c=document.createElement("i");c.style.background=i===4?"var(--hot)":L[i];e.append(c)}})};
+  fill("c1",[28,36,48,72,1]);fill("c2",[20,24,16,32,1]);
+  const root=document.documentElement.style;
+  document.querySelectorAll("input[type=color]").forEach(i=>i.oninput=()=>root.setProperty(i.dataset.v,i.value));
+  document.querySelectorAll("button").forEach(b=>b.onclick=()=>{
+    const [ink,paper,hot,save,dim]=b.dataset.t.split(",");
+    [["--ink",ink],["--paper",paper],["--hot",hot],["--save",save],["--dim",dim]].forEach(([k,v])=>{
+      root.setProperty(k,v);document.querySelector(`[data-v="${k}"]`).value=v})});
+</script></body></html>

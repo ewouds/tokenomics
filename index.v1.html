@@ -1,0 +1,646 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Journey of One Token</title>
+  <script>
+    (() => {
+      const param = new URLSearchParams(window.location.search).get("scoutTheme");
+      const theme = param || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      document.documentElement.setAttribute("data-theme", theme);
+    })();
+  </script>
+  <style>
+    :root {
+      color-scheme: light;
+      --cp-bg: #f7f4ef;
+      --cp-bg-elevated: #fcfbf8;
+      --cp-surface: #ffffff;
+      --cp-surface-soft: #f5f5f5;
+      --cp-border: #dedede;
+      --cp-border-strong: #919191;
+      --cp-text: #242424;
+      --cp-text-muted: #5c5c5c;
+      --cp-text-soft: #6f6f6f;
+      --cp-accent: #b11f4b;
+      --cp-accent-hover: #9a1a41;
+      --cp-accent-soft: rgba(177, 31, 75, 0.08);
+      --cp-accent-fg: #ffffff;
+      --cp-success: #16a34a;
+      --cp-danger: #dc2626;
+      --cp-warning: #f59e0b;
+      --cp-link: #0078d4;
+      --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.12);
+      --cp-overlay: rgba(255, 255, 255, 0.8);
+      --cp-panel: rgba(255, 255, 255, 0.86);
+      --cp-panel-strong: rgba(255, 255, 255, 0.96);
+      --cp-sheen: rgba(255, 255, 255, 0.55);
+      --cp-highlight: rgba(177, 31, 75, 0.12);
+    }
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --cp-bg: #3d3b3a;
+      --cp-bg-elevated: #343231;
+      --cp-surface: #292929;
+      --cp-surface-soft: #2e2e2e;
+      --cp-border: #474747;
+      --cp-border-strong: #5f5f5f;
+      --cp-text: #dedede;
+      --cp-text-muted: #919191;
+      --cp-text-soft: #b0b0b0;
+      --cp-accent: #fd8ea1;
+      --cp-accent-hover: #fb7b91;
+      --cp-accent-soft: rgba(253, 142, 161, 0.14);
+      --cp-accent-fg: #1a1a1a;
+      --cp-success: #4ade80;
+      --cp-danger: #f87171;
+      --cp-warning: #fbbf24;
+      --cp-link: #4da6ff;
+      --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
+      --cp-overlay: rgba(41, 41, 41, 0.88);
+      --cp-panel: rgba(41, 41, 41, 0.72);
+      --cp-panel-strong: rgba(41, 41, 41, 0.96);
+      --cp-sheen: rgba(255, 255, 255, 0.04);
+      --cp-highlight: rgba(253, 142, 161, 0.12);
+    }
+    * { box-sizing: border-box; }
+    html, body { width: 100%; min-height: 100%; margin: 0; }
+    body {
+      background: var(--cp-bg);
+      color: var(--cp-text);
+      font-family: "Segoe UI", Aptos, Calibri, -apple-system, BlinkMacSystemFont, sans-serif;
+      overflow: hidden;
+    }
+    button { color: inherit; font: inherit; }
+    .stage {
+      --scene-accent: var(--cp-accent);
+      position: relative;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      width: 100vw;
+      height: 100svh;
+      min-height: 500px;
+      padding: clamp(18px, 3.2vw, 46px) clamp(20px, 5.5vw, 84px) 22px;
+      overflow: hidden;
+      isolation: isolate;
+      background:
+        radial-gradient(ellipse at 80% 14%, var(--cp-accent-soft), transparent 35%),
+        linear-gradient(150deg, var(--cp-bg-elevated), var(--cp-bg) 62%);
+    }
+    .stage::before {
+      position: absolute;
+      z-index: -1;
+      inset: 0;
+      content: "";
+      opacity: .22;
+      background-image: linear-gradient(var(--cp-border) 1px, transparent 1px), linear-gradient(90deg, var(--cp-border) 1px, transparent 1px);
+      background-size: 52px 52px;
+      mask-image: linear-gradient(to bottom, black, transparent 82%);
+      pointer-events: none;
+    }
+    .topline, .bottomline { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+    .brand { display: flex; align-items: center; gap: 11px; font-size: 12px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+    .brand-mark { width: 22px; height: 15px; border: 2px solid var(--cp-accent); border-radius: 3px; position: relative; }
+    .brand-mark::before, .brand-mark::after { position: absolute; bottom: -5px; width: 4px; height: 4px; border-radius: 50%; background: var(--cp-accent); content: ""; }
+    .brand-mark::before { left: 2px; } .brand-mark::after { right: 2px; }
+    .act-label { color: var(--cp-text-muted); font-size: 12px; font-weight: 650; letter-spacing: .1em; text-transform: uppercase; }
+    .canvas { position: relative; display: grid; align-items: center; min-height: 0; }
+    .scene { display: none; width: 100%; height: 100%; align-items: center; }
+    .scene.active { display: grid; animation: scene-in .48s cubic-bezier(.2,.75,.2,1) both; }
+    @keyframes scene-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    .hero { width: min(100%, 1120px); margin: auto; }
+    .eyebrow { margin: 0 0 15px; color: var(--cp-accent); font-size: 13px; font-weight: 750; letter-spacing: .1em; text-transform: uppercase; }
+    h1, h2, p { margin-top: 0; }
+    h1 { max-width: 850px; margin-bottom: 22px; font-size: clamp(46px, 7.5vw, 104px); line-height: .96; letter-spacing: 0; }
+    h2 { margin-bottom: 18px; font-size: clamp(34px, 5vw, 66px); line-height: 1; letter-spacing: 0; }
+    .lead { max-width: 690px; margin-bottom: 0; color: var(--cp-text-muted); font-size: clamp(17px, 2vw, 22px); line-height: 1.45; }
+    .split { display: grid; grid-template-columns: minmax(270px, .92fr) minmax(390px, 1.08fr); gap: clamp(28px, 6vw, 88px); align-items: center; }
+    .token-hero { position: relative; display: grid; place-items: center; min-height: 360px; }
+    .token-orb { position: relative; display: grid; place-items: center; width: clamp(165px, 23vw, 270px); aspect-ratio: 1; border: 1px solid var(--cp-accent); border-radius: 50%; background: radial-gradient(circle at 35% 28%, var(--cp-surface), var(--cp-accent-soft) 55%, transparent 72%); box-shadow: 0 0 0 18px var(--cp-highlight), 0 0 90px var(--cp-accent-soft); animation: float 4.5s ease-in-out infinite; }
+    .token-orb span { color: var(--cp-accent); font-size: clamp(68px, 10vw, 116px); font-weight: 780; line-height: 1; }
+    .token-caption { position: absolute; bottom: 2%; color: var(--cp-text-muted); font-size: 14px; }
+    @keyframes float { 50% { transform: translateY(-10px); } }
+    .question { display: inline-flex; align-items: center; gap: 13px; margin: 20px 0 26px; padding: 14px 18px; border: 1px solid var(--cp-border); border-radius: 10px; background: var(--cp-surface); box-shadow: 0 8px 26px var(--cp-accent-soft); font-size: clamp(19px, 2.3vw, 29px); font-weight: 650; }
+    .question::before { content: "?"; display: grid; place-items: center; width: 34px; aspect-ratio: 1; border-radius: 50%; background: var(--cp-accent); color: var(--cp-accent-fg); font-size: 18px; }
+    .micro-label { color: var(--cp-text-muted); font-size: 12px; font-weight: 720; letter-spacing: .08em; text-transform: uppercase; }
+    .rail-scene { display: grid; grid-template-columns: 1fr auto; gap: 35px; align-items: center; }
+    .rail { position: relative; min-height: 255px; padding: 24px 0 52px; overflow: hidden; }
+    .rail::after { position: absolute; right: 0; bottom: 45px; left: 0; height: 6px; border-block: 2px solid var(--cp-border-strong); content: ""; }
+    .train { position: relative; z-index: 1; display: flex; align-items: end; gap: 10px; min-height: 190px; width: max-content; transition: transform .65s cubic-bezier(.2,.75,.2,1); }
+    .engine { position: relative; width: 94px; height: 100px; margin-left: 10px; border-radius: 8px 18px 5px 5px; background: var(--cp-text); color: var(--cp-bg); }
+    .engine::before { position: absolute; right: 15px; bottom: 16px; width: 18px; height: 22px; border-radius: 4px; background: var(--cp-link); content: ""; }
+    .engine::after { position: absolute; top: -23px; left: 22px; width: 16px; height: 24px; border-radius: 4px 4px 0 0; background: var(--cp-text); content: ""; }
+    .engine-label { position: absolute; right: 12px; bottom: -28px; color: var(--cp-text-muted); font-size: 10px; }
+    .car { position: relative; display: grid; place-items: center; flex: 0 0 auto; width: clamp(84px, 9vw, 124px); height: 82px; padding: 8px; border: 2px solid var(--car-color, var(--cp-accent)); border-radius: 5px; background: color-mix(in srgb, var(--car-color, var(--cp-accent)) 12%, var(--cp-surface)); color: var(--cp-text); font-size: clamp(10px, 1vw, 13px); font-weight: 730; text-align: center; }
+    .car::before, .car::after { position: absolute; bottom: -17px; width: 13px; height: 13px; border: 3px solid var(--cp-text-muted); border-radius: 50%; background: var(--cp-bg); content: ""; }
+    .car::before { left: 12px; } .car::after { right: 12px; }
+    .car-count { position: absolute; top: -26px; color: var(--cp-text-muted); font-size: 11px; white-space: nowrap; }
+    .token-particle { position: absolute; z-index: 2; bottom: 66%; width: 4px; height: 4px; border-radius: 50%; background: var(--car-color, var(--cp-accent)); opacity: 0; pointer-events: none; animation: token-drift 1.15s ease-out both; }
+    @keyframes token-drift { 15% { opacity: .9; } 100% { opacity: 0; transform: translateY(-27px) scale(.45); } }
+    .train-readout { width: 210px; padding: 20px; border-left: 3px solid var(--cp-accent); background: var(--cp-surface); }
+    .train-readout strong { display: block; margin: 5px 0; font-size: 38px; line-height: 1; }
+    .train-readout small { color: var(--cp-text-muted); font-size: 12px; }
+    .answer-car { display: none; position: relative; max-width: 270px; margin-top: 20px; padding: 15px 18px; border-left: 4px solid var(--cp-success); background: var(--cp-surface); font-size: 18px; font-weight: 650; }
+    .answer-car.visible { display: block; animation: scene-in .35s both; }
+    .storm-layout { width: 100%; }
+    .storm-head { display: flex; justify-content: space-between; align-items: end; gap: 20px; margin-bottom: 23px; }
+    .storm-head h2 { max-width: 740px; margin: 0; }
+    .counter { min-width: 165px; text-align: right; }
+    .counter strong { display: block; color: var(--cp-accent); font-size: clamp(38px, 6vw, 72px); line-height: .9; font-variant-numeric: tabular-nums; }
+    .counter span { color: var(--cp-text-muted); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+    .manifest { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 0 0 20px; }
+    .manifest-item { display: grid; grid-template-columns: 9px 1fr auto; align-items: center; gap: 9px; min-height: 49px; padding: 9px 11px; border: 1px solid var(--cp-border); background: var(--cp-panel); opacity: .26; transform: translateY(6px); transition: opacity .25s, transform .25s, border-color .25s; }
+    .manifest-item.revealed { opacity: 1; transform: translateY(0); border-color: color-mix(in srgb, var(--item-color) 58%, var(--cp-border)); }
+    .swatch { width: 9px; height: 28px; border-radius: 4px; background: var(--item-color); }
+    .manifest-item b { font-size: 12px; line-height: 1.15; }
+    .manifest-item span:last-child { color: var(--cp-text-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+    .manifest-item.setting span:last-child { color: var(--cp-accent); font-size: 9px; font-weight: 800; letter-spacing: .07em; }
+    .freight { position: relative; height: 142px; border-bottom: 7px double var(--cp-border-strong); overflow: hidden; }
+    .freight .train { position: absolute; bottom: 15px; left: 0; transform: translateX(var(--train-shift, 0px)); }
+    .freight .car { width: clamp(65px, 8vw, 102px); height: 65px; font-size: 10px; }
+    .mini-note { min-height: 27px; margin: 13px 0 0; color: var(--cp-text-muted); font-size: 13px; }
+    .storm-word { color: var(--cp-accent); font-size: clamp(25px, 4vw, 46px); font-weight: 850; letter-spacing: .02em; text-transform: uppercase; opacity: 0; transform: scale(.86); transition: opacity .3s, transform .3s; }
+    .storm-word.visible { opacity: 1; transform: scale(1); }
+    .economics { width: 100%; }
+    .economics-top { display: flex; align-items: end; justify-content: space-between; gap: 22px; margin-bottom: 22px; }
+    .economics-top h2 { margin: 0; }
+    .economics-grid { display: grid; grid-template-columns: 1fr 1fr 1.15fr; gap: 14px; }
+    .econ-box { min-height: 170px; padding: 18px; border-top: 4px solid var(--box-color, var(--cp-accent)); background: var(--cp-surface); }
+    .econ-box .micro-label { display: block; min-height: 32px; }
+    .econ-box strong { display: block; margin: 12px 0 6px; font-size: clamp(29px, 4vw, 48px); font-variant-numeric: tabular-nums; }
+    .econ-box p { margin: 0; color: var(--cp-text-muted); font-size: 13px; line-height: 1.35; }
+    .equation { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 20px; padding: 15px; border: 1px solid var(--cp-border); background: var(--cp-bg-elevated); font-size: clamp(17px, 2vw, 24px); font-weight: 720; text-align: center; }
+    .equation em { color: var(--cp-accent); font-style: normal; }
+    .fact-strip { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 13px; }
+    .fact { padding: 6px 9px; border-radius: 4px; background: var(--cp-accent-soft); color: var(--cp-text-muted); font-size: 11px; }
+    .optimization { width: 100%; }
+    .optimization-head { display: flex; align-items: end; justify-content: space-between; gap: 20px; margin-bottom: 20px; }
+    .optimization-head h2 { margin: 0; }
+    .same-answer { display: flex; align-items: center; gap: 9px; color: var(--cp-success); font-size: 13px; font-weight: 750; }
+    .same-answer::before { content: "="; display: grid; place-items: center; width: 27px; height: 27px; border: 1px solid var(--cp-success); border-radius: 50%; }
+    .compare { display: grid; grid-template-columns: 1fr 70px 1fr; align-items: stretch; gap: 12px; }
+    .compare-col { padding: 17px 19px; border: 1px solid var(--cp-border); background: var(--cp-surface); }
+    .compare-col.optimized { border-color: var(--cp-success); box-shadow: inset 0 4px var(--cp-success); }
+    .compare-title { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 12px; color: var(--cp-text-muted); font-size: 11px; font-weight: 750; letter-spacing: .09em; text-transform: uppercase; }
+    .bar-row { display: grid; grid-template-columns: 102px 1fr 48px; align-items: center; gap: 9px; margin: 10px 0; color: var(--cp-text-muted); font-size: 11px; }
+    .bar-track { height: 10px; background: var(--cp-surface-soft); }
+    .bar { height: 100%; width: var(--bar-width); background: var(--bar-color, var(--cp-accent)); transition: width .65s cubic-bezier(.2,.75,.2,1); }
+    .bar-row b { color: var(--cp-text); font-size: 11px; text-align: right; font-variant-numeric: tabular-nums; }
+    .arrow-bridge { display: grid; place-items: center; color: var(--cp-accent); font-size: 33px; }
+    .total-line { display: flex; justify-content: space-between; align-items: end; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--cp-border); }
+    .total-line strong { font-size: 32px; line-height: 1; font-variant-numeric: tabular-nums; }
+    .total-line small { color: var(--cp-text-muted); font-size: 11px; }
+    .quality-note { margin-top: 14px; color: var(--cp-text-muted); font-size: 12px; text-align: center; }
+    .opt-steps { display: flex; flex-wrap: wrap; justify-content: center; gap: 7px; margin-top: 13px; }
+    .opt-steps span { padding: 5px 8px; border-left: 2px solid var(--cp-success); background: var(--cp-accent-soft); color: var(--cp-text-muted); font-size: 10px; }
+    .principles { display: grid; grid-template-columns: .9fr 1.1fr; gap: 60px; align-items: center; }
+    .principle-list { display: grid; gap: 14px; counter-reset: p; }
+    .principle { display: grid; grid-template-columns: 42px 1fr; align-items: center; gap: 14px; padding: 16px 0; border-bottom: 1px solid var(--cp-border); font-size: clamp(21px, 2.7vw, 34px); font-weight: 750; }
+    .principle::before { counter-increment: p; content: "0" counter(p); color: var(--cp-accent); font-size: 14px; font-weight: 800; }
+    .closing-token { display: grid; place-items: center; min-height: 330px; }
+    .closing-token .token-orb { width: clamp(150px, 19vw, 220px); }
+    .bottomline { position: relative; padding-top: 13px; border-top: 1px solid var(--cp-border); }
+    .progress-wrap { display: flex; flex: 1; align-items: center; gap: 14px; }
+    .progress { height: 3px; flex: 1; background: var(--cp-border); overflow: hidden; }
+    .progress-fill { width: 14.285%; height: 100%; background: var(--cp-accent); transition: width .3s ease; }
+    .scene-count { min-width: 52px; color: var(--cp-text-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+    .controls { display: flex; align-items: center; gap: 7px; }
+    .control-btn { display: grid; place-items: center; width: 34px; height: 34px; padding: 0; border: 1px solid var(--cp-border); border-radius: 6px; background: var(--cp-surface); cursor: pointer; }
+    .control-btn:hover { border-color: var(--cp-accent); background: var(--cp-accent-soft); }
+    .control-btn:focus-visible { outline: 2px solid var(--cp-link); outline-offset: 2px; }
+    .control-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .keys-hint { margin-left: 8px; color: var(--cp-text-muted); font-size: 11px; white-space: nowrap; }
+    .overlay { position: fixed; z-index: 5; inset: 0; display: none; place-items: center; padding: 20px; background: var(--cp-overlay); backdrop-filter: blur(4px); }
+    .overlay.open { display: grid; }
+    .dialog { width: min(600px, 100%); padding: 26px; border: 1px solid var(--cp-border); background: var(--cp-panel-strong); box-shadow: var(--cp-shadow); }
+    .dialog-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .dialog h3 { margin: 0; font-size: 23px; }
+    .key-list { display: grid; grid-template-columns: 90px 1fr; gap: 12px; color: var(--cp-text-muted); font-size: 14px; }
+    kbd { width: fit-content; min-width: 35px; padding: 4px 8px; border: 1px solid var(--cp-border-strong); border-radius: 4px; background: var(--cp-surface); color: var(--cp-text); font-family: Consolas, "Courier New", Courier, monospace; text-align: center; }
+    .notes-body { max-height: min(62vh, 570px); overflow: auto; color: var(--cp-text-muted); font-size: 14px; line-height: 1.5; }
+    .notes-body strong { display: block; margin: 15px 0 4px; color: var(--cp-text); }
+    .notes-body strong:first-child { margin-top: 0; }
+    .notes-body p { margin-bottom: 8px; }
+    .note-meta { display: flex; gap: 14px; color: var(--cp-accent); font-size: 12px; font-weight: 750; text-transform: uppercase; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+    @media (max-width: 760px) {
+      body { overflow: auto; }
+      .stage { min-height: 620px; height: 100svh; padding: 17px 18px 15px; }
+      .split, .principles { grid-template-columns: 1fr; gap: 10px; }
+      .token-hero { min-height: 210px; grid-row: 1; }
+      .token-caption { bottom: -4px; }
+      h1 { font-size: clamp(44px, 12vw, 74px); }
+      .rail-scene { grid-template-columns: 1fr; gap: 5px; }
+      .rail { min-height: 230px; overflow-x: auto; }
+      .train-readout { width: 100%; padding: 12px 16px; }
+      .train-readout strong { display: inline; margin-right: 7px; font-size: 28px; }
+      .train-readout small { display: inline; }
+      .manifest { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+      .manifest-item { min-height: 42px; padding: 6px 8px; }
+      .manifest-item b { font-size: 10px; }
+      .storm-head { align-items: center; }
+      .storm-head h2 { font-size: 34px; }
+      .counter { min-width: 95px; }
+      .counter strong { font-size: 40px; }
+      .freight { height: 112px; }
+      .freight .train { min-height: 90px; }
+      .economics-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+      .econ-box { min-height: 125px; padding: 12px; }
+      .econ-box:last-child { grid-column: span 2; }
+      .econ-box strong { margin: 6px 0 3px; font-size: 29px; }
+      .equation { margin-top: 10px; padding: 10px 5px; }
+      .fact-strip { margin-top: 7px; }
+      .compare { grid-template-columns: 1fr; gap: 8px; }
+      .arrow-bridge { height: 18px; transform: rotate(90deg); }
+      .optimization-head { align-items: start; flex-wrap: wrap; margin-bottom: 12px; }
+      .optimization-head > div:first-child { flex: 1 1 100%; }
+      .optimization-head h2 { margin-bottom: 0; font-size: 30px; }
+      .compare { gap: 4px; }
+      .compare-col { padding: 8px; }
+      .compare-title { margin-bottom: 5px; }
+      .bar-row { grid-template-columns: 82px 1fr 42px; margin: 4px 0; font-size: 10px; }
+      .bar-track { height: 8px; }
+      .total-line { margin-top: 8px; padding-top: 7px; }
+      .total-line strong { font-size: 26px; }
+      .opt-steps span { flex: 1 1 calc(50% - 7px); padding: 3px 4px; line-height: 1.15; text-align: center; }
+      .quality-note { margin-top: 8px; font-size: 10px; line-height: 1.25; }
+      .closing-token { min-height: 150px; }
+      .principle { padding: 10px 0; font-size: 22px; }
+      .keys-hint { display: none; }
+      .bottomline { gap: 9px; }
+      .brand { font-size: 10px; }
+      .act-label { font-size: 10px; }
+    }
+    @media (max-height: 650px) and (min-width: 761px) {
+      .stage { min-height: 0; padding-top: 18px; padding-bottom: 12px; }
+      .token-hero { min-height: 240px; }
+      .token-orb { width: 180px; }
+      .econ-box { min-height: 135px; padding: 13px; }
+      .principle { padding: 9px 0; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="stage" id="stage" aria-label="The Journey of One Token interactive presentation">
+    <header class="topline">
+      <div class="brand"><span class="brand-mark" aria-hidden="true"></span><span>The Journey of One Token</span></div>
+      <div class="act-label" id="actLabel">Act I · It looks simple</div>
+    </header>
+
+    <div class="canvas" aria-live="polite">
+      <section class="scene active" data-scene="0">
+        <div class="hero split">
+          <div>
+            <p class="eyebrow">A tiny unit. A surprisingly long journey.</p>
+            <h1>One token.<br>One big trip.</h1>
+            <p class="lead">A token is a small piece of text a model can process. Think of it as one parcel on a much longer train.</p>
+          </div>
+          <div class="token-hero" aria-hidden="true"><div class="token-orb"><span>1</span></div><div class="token-caption">ONE TEXT TOKEN</div></div>
+        </div>
+      </section>
+
+      <section class="scene" data-scene="1">
+        <div class="hero split">
+          <div>
+            <p class="eyebrow">A familiar request</p>
+            <h2>Looks easy,<br>doesn't it?</h2>
+            <div class="question" id="questionSimple">Summarise this incident.</div>
+            <p class="lead">A short question goes in. A helpful answer comes out.</p>
+          </div>
+          <div class="token-hero" aria-hidden="true"><div class="token-orb"><span>?</span></div><div class="token-caption">THE REQUEST</div></div>
+        </div>
+      </section>
+
+      <section class="scene" data-scene="2">
+        <div class="hero">
+          <p class="eyebrow">The simple journey</p>
+          <div class="rail-scene">
+            <div>
+              <h2>In. Think.<br>Out.</h2>
+              <div class="question" id="questionJourney">Summarise this incident.</div>
+              <div class="answer-car" id="simpleAnswer">Service restored. No data lost.</div>
+            </div>
+            <div>
+              <div class="rail"><div class="train" id="simpleTrain"><div class="engine"><span class="engine-label">MODEL</span></div></div></div>
+              <div class="train-readout"><span class="micro-label">VISIBLE TOKEN TALLY</span><strong id="simpleTotal">0</strong><small id="simpleBreakdown">input + answer</small><br><small id="simpleCredits"></small></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="scene" data-scene="3">
+        <div class="hero storm-layout">
+          <div class="storm-head"><div><p class="eyebrow">Context behind the question</p><h2>Same request.<br>More passengers.</h2></div><div class="counter"><strong id="stormTotal">0</strong><span>tokens in the manifest</span></div></div>
+          <div class="manifest" id="manifest"></div>
+          <div class="freight"><div class="train" id="stormTrain"><div class="engine"><span class="engine-label">MODEL</span></div></div></div>
+          <p class="mini-note" id="stormNote">Tap Space to load the request context, one layer at a time.</p>
+          <div class="storm-word" id="stormWord">Are we doomed?</div>
+        </div>
+      </section>
+
+      <section class="scene" data-scene="4">
+        <div class="hero economics">
+          <div class="economics-top"><div><p class="eyebrow">One request. Several cost drivers.</p><h2>Tokens aren't credits.</h2></div><div class="same-answer">Workload × model economics = credits</div></div>
+          <div class="economics-grid" id="economicsGrid"></div>
+          <div class="fact-strip" id="factStrip"></div>
+        </div>
+      </section>
+
+      <section class="scene" data-scene="5">
+        <div class="hero optimization">
+          <div class="optimization-head"><div><p class="eyebrow">Tune the journey, keep the destination</p><h2>Less freight.<br>Same destination.</h2></div><div class="same-answer">Answer quality held constant</div></div>
+          <div class="compare" id="compare"></div>
+          <div class="opt-steps" id="optimizationSteps"></div>
+          <p class="quality-note" id="qualityNote"></p>
+        </div>
+      </section>
+
+      <section class="scene" data-scene="6">
+        <div class="hero principles">
+          <div><p class="eyebrow">The useful mental model</p><h2>Make every<br>car count.</h2><p class="lead">The aim isn't fewer tokens at any cost. It's enough context and capability to do the job well.</p></div>
+          <div><div class="principle-list" id="principles"></div></div>
+        </div>
+      </section>
+    </div>
+
+    <footer class="bottomline">
+      <div class="progress-wrap"><div class="progress" aria-label="Presentation progress"><div class="progress-fill" id="progressFill"></div></div><span class="scene-count" id="sceneCount">01 / 07</span></div>
+      <div class="controls">
+        <button class="control-btn" id="prevBtn" aria-label="Previous scene" title="Previous scene (Left arrow)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+        <button class="control-btn" id="nextBtn" aria-label="Next scene" title="Next scene (Right arrow)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
+        <button class="control-btn" id="notesBtn" aria-label="Presenter notes" title="Presenter notes (N)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5"/></svg></button>
+        <button class="control-btn" id="helpBtn" aria-label="Keyboard help" title="Keyboard help (?)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.7 9a2.4 2.4 0 1 1 4.3 1.5c-.8 1-2 1-2 2.5M12 17h.01"/></svg></button>
+        <span class="keys-hint">← → scenes&nbsp; · &nbsp;Space reveal&nbsp; · &nbsp;R reset</span>
+      </div>
+    </footer>
+  </main>
+
+  <div class="overlay" id="helpOverlay" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+    <div class="dialog"><div class="dialog-head"><h3 id="helpTitle">Presentation controls</h3><button class="control-btn close-overlay" aria-label="Close help"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div><div class="key-list"><kbd>←</kbd><span>Previous scene</span><kbd>→</kbd><span>Next scene</span><kbd>Space</kbd><span>Reveal the next visual beat</span><kbd>R</kbd><span>Reset to the first scene</span><kbd>N</kbd><span>Open presenter notes</span><kbd>Esc</kbd><span>Close this overlay</span></div></div>
+  </div>
+  <div class="overlay" id="notesOverlay" role="dialog" aria-modal="true" aria-labelledby="notesTitle">
+    <div class="dialog"><div class="dialog-head"><div><h3 id="notesTitle">Presenter notes</h3><div class="note-meta"><span id="notesDuration"></span><span id="notesAct"></span></div></div><button class="control-btn close-overlay" aria-label="Close presenter notes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div><div class="notes-body" id="notesBody"></div></div>
+  </div>
+
+  <script>
+    // EDITABLE EXAMPLE CONFIG: change token counts, credit multipliers, data labels, colours, and scene timing here.
+    const CONFIG = {
+      timings: [30, 35, 40, 65, 45, 55, 25],
+      simple: { question: "Summarise this incident.", input: 18, output: 34, illustrativeCredits: 2 },
+      layers: [
+        { key: "user", label: "User input", tokens: 18, color: "var(--cp-accent)" },
+        { key: "system", label: "System + developer", tokens: 720, color: "var(--cp-link)" },
+        { key: "skills", label: "Skills / agent instructions", tokens: 540, color: "var(--cp-warning)" },
+        { key: "history", label: "Relevant conversation", tokens: 980, color: "var(--cp-success)" },
+        { key: "rag", label: "Retrieved passages", tokens: 1650, color: "var(--cp-danger)" },
+        { key: "tools", label: "Tool call + result", tokens: 820, color: "var(--cp-accent-hover)" },
+        { key: "other", label: "Other required context", tokens: 390, color: "var(--cp-text-muted)" },
+        { key: "cache", label: "Cached / uncached input", kind: "setting", detail: "SPLIT", color: "var(--cp-success)" },
+        { key: "model", label: "Model selection", kind: "setting", note: "Model choice changes economics and behaviour, not the count of identical text.", color: "var(--cp-link)" },
+        { key: "reasoning", label: "Reasoning configuration", kind: "setting", note: "Reasoning depth is a configuration; any added compute is platform-dependent.", color: "var(--cp-warning)" },
+        { key: "output", label: "Generated answer", tokens: 170, color: "var(--cp-border-strong)" }
+      ],
+      economics: {
+        uncached: 4268, cached: 850, reasoningEffort: 3, output: 170,
+        modelLabel: "Balanced model", modelMultiplier: 1.0, creditEstimate: 47,
+        unitLabel: "illustrative credits", cacheCreditFactor: 0.25
+      },
+      optimized: {
+        before: { input: 5118, cached: 850, reasoning: 3, output: 170, multiplier: 1.0, credits: 47 },
+        after: { input: 2540, cached: 1120, reasoning: 2, output: 120, multiplier: 0.8, credits: 24 },
+        answer: "Service restored. No data lost.", qualityLabel: "Same useful answer"
+      },
+      labels: {
+        principles: ["Send only what matters", "Use the right intelligence", "Reuse what stays the same"],
+        optimizationSteps: ["Clear instructions", "Remove duplicates", "Select useful history", "Retrieve focused passages", "Reuse stable prefixes", "Match model + reasoning", "Limit needless output", "Route by task complexity"],
+        facts: ["Same text ≠ same price across models", "Cached input is still in the request", "Reasoning behaviour varies by model and platform"],
+        actNames: ["Act I · It looks simple", "Act II · Then reality arrives", "Act III · Optimise the system"]
+      },
+      scenes: [
+        { title: "One token", objective: "Give the audience an intuitive unit, not a tokenizer lecture.", visual: "One illuminated parcel sits alone before the train begins its journey.", script: "Let's follow one token. A token is a small piece of text the model processes. It might be a word, part of a word, or punctuation. For now, picture one parcel on a train. How big can the trip get?", key: "Right arrow to begin; Space has no extra reveal here.", remember: "A token is a piece of processed text." },
+        { title: "A simple question", objective: "Set up the deliberately simple mental model.", visual: "The same short incident question appears beside the single token.", script: "Here is a familiar request: ‘Summarise this incident.’ It feels like one small input and one answer. Surely we just count those two things and call it a day?", key: "Right arrow to show the journey.", remember: "The visible question is only the start of the request." },
+        { title: "The simple journey", objective: "Establish a small input-plus-output baseline.", visual: "Input and answer cargo roll through the model; the counter rises in two steps.", script: "In our teaching example, eighteen input tokens go in and thirty-four answer tokens come out: fifty-two total. The little credit figure is illustrative, not a price quote. At this point the accounting seems pleasantly tidy.", key: "Space loads input, then answer; Right arrow skips to the next scene.", remember: "A basic tally starts with input plus generated output." },
+        { title: "Reality arrives", objective: "Reveal the hidden context that can accompany the user’s words.", visual: "Eight colour-coded freight cars load one by one; the counter and train grow into a storm.", script: "Now the rest of the train arrives. System and developer rules. Agent skills. Selected history. Retrieved passages. Tool calls and results. Other context. Then the answer. Each text layer can add input tokens. History may be truncated, selected, or summarised; it is not always the entire chat. Good retrieval can send a useful excerpt instead of a library. Skills add context, but can improve task completion. The answer is visible; much of the billable input, and sometimes reasoning work, is not. This is a lot of luggage for one sentence. Are we doomed?", key: "Space reveals each manifest row; the last reveal asks the question.", remember: "The prompt is often a context bundle, not just the user's sentence." },
+        { title: "How credits happen", objective: "Separate token volumes, caching, computation, and model economics.", visual: "A transparent workload panel is multiplied by model economics; each factor stays distinct.", script: "Not all tokens have the same economics. Cached input still travels with the request, but eligible repeated input may cost less. Reasoning depth is a setting or behaviour; reasoning tokens or compute are the work it may trigger. Those are related, not duplicate line items. Model choice can change price, credits, latency, capacity, and reasoning behaviour. It does not magically change the token count of identical text. There is no universal token-to-credit exchange rate. Think workload times model economics equals credits.", key: "Space highlights the separate workload and model factors.", remember: "Token counts describe volume; credits depend on the platform and model economics." },
+        { title: "Optimise the system", objective: "Demonstrate meaningful savings without degrading the intended answer.", visual: "Before and after cargo tallies sit side by side; the answer remains visually identical.", script: "We can reduce waste without shrinking the outcome. Make instructions clear. Remove duplication. Keep only useful history. Retrieve fewer, better passages. Keep stable prefixes reusable for caching. Route simple work to an appropriate model and reserve deeper reasoning for tasks that need it. Set a useful output limit. In this example the same answer remains, while illustrative credits fall from forty-seven to twenty-four. The exact result depends on the real platform and workload.", key: "Space reveals the optimisation comparison.", remember: "Optimise irrelevant work, not the value of the answer." },
+        { title: "Three principles", objective: "Leave the audience with three repeatable design rules.", visual: "The train settles into three labelled cars, each carrying one principle.", script: "Three things to take back. Send only what matters. Use the right intelligence for the job. Reuse what stays the same. The goal is not the smallest possible model or the fewest possible tokens. It is a useful answer with a well-designed journey. Thank you.", key: "R returns to the opening; Left arrow revisits a scene.", remember: "Send only what matters. Use the right intelligence. Reuse what stays the same." }
+      ]
+    };
+
+    const scenes = [...document.querySelectorAll(".scene")];
+    let sceneIndex = 0;
+    let beat = 0;
+    let stormTotal = 0;
+    const $ = (selector) => document.querySelector(selector);
+    function formatNumber(value) { return new Intl.NumberFormat("en-US").format(value); }
+    function makeCar(label, count, color) {
+      const car = document.createElement("div");
+      car.className = "car";
+      car.style.setProperty("--car-color", color);
+      car.innerHTML = `<span class="car-count">${formatNumber(count)} tokens</span>${label}`;
+      for (let index = 0; index < 4; index++) {
+        const particle = document.createElement("i");
+        particle.className = "token-particle";
+        particle.style.left = `${18 + index * 19}%`;
+        particle.style.animationDelay = `${index * 70}ms`;
+        particle.setAttribute("aria-hidden", "true");
+        car.append(particle);
+      }
+      return car;
+    }
+    function setScene(index) {
+      sceneIndex = Math.max(0, Math.min(scenes.length - 1, index));
+      beat = 0;
+      scenes.forEach((scene, i) => scene.classList.toggle("active", i === sceneIndex));
+      const act = sceneIndex < 3 ? 0 : sceneIndex < 5 ? 1 : 2;
+      $("#actLabel").textContent = CONFIG.labels.actNames[act];
+      $("#sceneCount").textContent = `${String(sceneIndex + 1).padStart(2, "0")} / ${String(scenes.length).padStart(2, "0")}`;
+      $("#progressFill").style.width = `${((sceneIndex + 1) / scenes.length) * 100}%`;
+      if (sceneIndex === 2) resetSimple();
+      if (sceneIndex === 3) resetStorm();
+      if (sceneIndex === 4) renderEconomics();
+      if (sceneIndex === 5) renderCompare();
+      if (sceneIndex === 6) renderPrinciples();
+      renderNotes();
+    }
+    function resetSimple() {
+      const train = $("#simpleTrain");
+      train.querySelectorAll(".car").forEach((car) => car.remove());
+      $("#simpleTotal").textContent = "0";
+      $("#simpleBreakdown").textContent = "input + answer";
+      $("#simpleCredits").textContent = `${CONFIG.simple.illustrativeCredits} illustrative credits`;
+      $("#simpleAnswer").classList.remove("visible");
+      $("#questionJourney").textContent = CONFIG.simple.question;
+    }
+    function advanceSimple() {
+      const train = $("#simpleTrain");
+      if (beat === 0) {
+        train.append(makeCar("INPUT", CONFIG.simple.input, "var(--cp-accent)"));
+        $("#simpleTotal").textContent = formatNumber(CONFIG.simple.input);
+        $("#simpleBreakdown").textContent = `${formatNumber(CONFIG.simple.input)} input tokens`;
+      } else if (beat === 1) {
+        train.append(makeCar("ANSWER", CONFIG.simple.output, "var(--cp-success)"));
+        $("#simpleTotal").textContent = formatNumber(CONFIG.simple.input + CONFIG.simple.output);
+        $("#simpleBreakdown").textContent = `${formatNumber(CONFIG.simple.input)} input + ${formatNumber(CONFIG.simple.output)} output`;
+        $("#simpleCredits").textContent = `${CONFIG.simple.illustrativeCredits} illustrative credits`;
+        $("#simpleAnswer").classList.add("visible");
+      }
+      beat = Math.min(beat + 1, 2);
+    }
+    function resetStorm() {
+      beat = 0;
+      stormTotal = 0;
+      $("#stormTotal").textContent = "0";
+      $("#stormNote").textContent = "Tap Space to load the request context, one layer at a time.";
+      $("#stormWord").classList.remove("visible");
+      const manifest = $("#manifest");
+      manifest.replaceChildren();
+      CONFIG.layers.forEach((item) => {
+        const row = document.createElement("div");
+        row.className = `manifest-item${item.kind === "setting" ? " setting" : ""}`;
+        row.style.setProperty("--item-color", item.color);
+        row.innerHTML = `<span class="swatch"></span><b>${item.label}</b><span>${item.kind === "setting" ? item.detail || "CONTROL" : formatNumber(item.tokens)}</span>`;
+        manifest.append(row);
+      });
+      const train = $("#stormTrain");
+      train.querySelectorAll(".car").forEach((car) => car.remove());
+      train.style.setProperty("--train-shift", "0px");
+    }
+    function advanceStorm() {
+      if (beat < CONFIG.layers.length) {
+        const item = CONFIG.layers[beat];
+        $("#manifest").children[beat].classList.add("revealed");
+        if (item.kind !== "setting") {
+          $("#stormTrain").append(makeCar(item.label, item.tokens, item.color));
+          stormTotal += item.tokens;
+        }
+        $("#stormTotal").textContent = formatNumber(stormTotal);
+        $("#stormNote").textContent = item.key === "cache"
+          ? `Cache split: ${formatNumber(CONFIG.economics.cached)} cached and ${formatNumber(CONFIG.economics.uncached)} uncached. Cached input stays in the request; eligible repeats may cost less.`
+          : item.note || stormNotes[beat] || "More context can help, but every passenger should earn its place.";
+        if (item.kind !== "setting") $("#stormTrain").style.setProperty("--train-shift", `${Math.max(-100, -beat * 28)}px`);
+      } else {
+        $("#stormWord").classList.add("visible");
+      }
+      beat = Math.min(beat + 1, CONFIG.layers.length + 1);
+    }
+    const stormNotes = [
+      "Start with what the person actually asked.",
+      "System and developer instructions shape behaviour.",
+      "Skills add guidance and can improve task completion.",
+      "History may be selected, summarised, or truncated.",
+      "Focused retrieval can beat sending the whole library.",
+      "Tool calls and returned results join the context too.",
+      "Other required context may be necessary for the task.",
+      "Cache marks a subset of input; it does not add duplicate tokens.",
+      "Model choice changes price and behaviour, not identical-text token count.",
+      "Reasoning depth can add hidden or billable compute, depending on the platform.",
+      "The generated answer is visible; much of the input is not."
+    ];
+    function renderEconomics() {
+      const data = CONFIG.economics;
+      const rows = [
+        { title: "Uncached input", value: data.uncached, note: "Text tokens that may use standard input economics.", color: "var(--cp-link)" },
+        { title: "Cached input", value: data.cached, note: "Still in the request; eligible repeats may cost less.", color: "var(--cp-success)" },
+        { title: "Reasoning effort", value: data.reasoningEffort, note: "Illustrative depth setting; not a token count.", color: "var(--cp-warning)" },
+        { title: "Generated output", value: data.output, note: "The answer tokens the model generates.", color: "var(--cp-accent)" },
+        { title: data.modelLabel, value: `${data.modelMultiplier.toFixed(1)}×`, note: `Illustrative model economics; estimated ${data.creditEstimate} ${data.unitLabel}.`, color: "var(--cp-danger)" }
+      ];
+      const grid = $("#economicsGrid");
+      grid.replaceChildren();
+      rows.forEach((row) => {
+        const box = document.createElement("div");
+        box.className = "econ-box";
+        box.style.setProperty("--box-color", row.color);
+        box.innerHTML = `<span class="micro-label">${row.title}</span><strong>${typeof row.value === "number" ? formatNumber(row.value) : row.value}</strong><p>${row.note}</p>`;
+        grid.append(box);
+      });
+      $("#factStrip").replaceChildren(...CONFIG.labels.facts.map((fact) => {
+        const span = document.createElement("span"); span.className = "fact"; span.textContent = fact; return span;
+      }));
+    }
+    function renderCompare() {
+      const { before, after } = CONFIG.optimized;
+      const max = Math.max(before.input, after.input);
+      const groups = [
+        { title: "Before · default journey", data: before, color: "var(--cp-accent)" },
+        { title: "After · focused journey", data: after, color: "var(--cp-success)" }
+      ];
+      const compare = $("#compare");
+      compare.replaceChildren();
+      groups.forEach(({ title, data, color }, index) => {
+        if (index === 1) { const arrow = document.createElement("div"); arrow.className = "arrow-bridge"; arrow.setAttribute("aria-hidden", "true"); arrow.textContent = "→"; compare.append(arrow); }
+        const column = document.createElement("div");
+        column.className = `compare-col${index ? " optimized" : ""}`;
+        const input = data.input;
+        const lines = [
+          ["Input total", input, color],
+          ["Cached input", data.cached, "var(--cp-success)"],
+          ["Reasoning depth", `${data.reasoning}/3`, "var(--cp-warning)"],
+          ["Output", data.output, "var(--cp-link)"]
+        ];
+        column.innerHTML = `<div class="compare-title"><span>${title}</span><span>${data.multiplier.toFixed(1)}× model</span></div>` + lines.map(([label, value, barColor]) => {
+          const numeric = typeof value === "number" ? value : parseInt(value, 10) || 0;
+          const width = label === "Reasoning depth" ? `${(numeric / 3) * 100}%` : `${Math.max(3, (numeric / max) * 100)}%`;
+          return `<div class="bar-row"><span>${label}</span><div class="bar-track"><div class="bar" style="--bar-width:${width};--bar-color:${barColor}"></div></div><b>${typeof value === "number" ? formatNumber(value) : value}</b></div>`;
+        }).join("") + `<div class="total-line"><div><small>ILLUSTRATIVE CREDIT ESTIMATE</small><br><strong>${data.credits}</strong></div><small>${formatNumber(data.input + data.output)} total text tokens</small></div>`;
+        compare.append(column);
+      });
+      $("#qualityNote").textContent = `${CONFIG.optimized.qualityLabel}: “${CONFIG.optimized.answer}” · Example values only; actual credits vary by model and platform.`;
+      $("#optimizationSteps").replaceChildren(...CONFIG.labels.optimizationSteps.map((label) => {
+        const step = document.createElement("span"); step.textContent = label; return step;
+      }));
+    }
+    function renderPrinciples() {
+      const list = $("#principles");
+      list.replaceChildren(...CONFIG.labels.principles.map((label) => {
+        const item = document.createElement("div"); item.className = "principle"; item.textContent = label; return item;
+      }));
+    }
+    function renderNotes() {
+      const note = CONFIG.scenes[sceneIndex];
+      $("#notesTitle").textContent = `${String(sceneIndex + 1).padStart(2, "0")} · ${note.title}`;
+      $("#notesDuration").textContent = `${CONFIG.timings[sceneIndex]} sec`;
+      $("#notesAct").textContent = sceneIndex < 3 ? "Act I" : sceneIndex < 5 ? "Act II" : "Act III";
+      $("#notesBody").innerHTML = `<strong>Objective</strong><p>${note.objective}</p><strong>Visual</strong><p>${note.visual}</p><strong>Presenter says</strong><p>${note.script}</p><strong>Interaction</strong><p>${note.key}</p><strong>Remember</strong><p>${note.remember}</p>`;
+    }
+    function advanceBeat() {
+      if (sceneIndex === 2) advanceSimple();
+      if (sceneIndex === 3) advanceStorm();
+      if (sceneIndex === 4) {
+        beat = Math.min(beat + 1, 1);
+        document.querySelectorAll(".econ-box").forEach((box, i) => box.style.transform = beat && i === 4 ? "translateY(-5px)" : "none");
+      }
+      if (sceneIndex === 5) {
+        beat = Math.min(beat + 1, 1);
+        document.querySelectorAll(".compare-col").forEach((column, i) => column.style.opacity = beat || i === 0 ? "1" : ".25");
+      }
+    }
+    function toggleOverlay(id) { $("#" + id).classList.toggle("open"); }
+    function reset() { setScene(0); }
+    $("#prevBtn").addEventListener("click", () => setScene(sceneIndex - 1));
+    $("#nextBtn").addEventListener("click", () => setScene(sceneIndex + 1));
+    $("#helpBtn").addEventListener("click", () => toggleOverlay("helpOverlay"));
+    $("#notesBtn").addEventListener("click", () => { renderNotes(); toggleOverlay("notesOverlay"); });
+    document.querySelectorAll(".close-overlay").forEach((button) => button.addEventListener("click", () => button.closest(".overlay").classList.remove("open")));
+    document.querySelectorAll(".overlay").forEach((overlay) => overlay.addEventListener("click", (event) => { if (event.target === overlay) overlay.classList.remove("open"); }));
+    document.addEventListener("keydown", (event) => {
+      if (["INPUT", "TEXTAREA"].includes(document.activeElement.tagName)) return;
+      if (event.key === "Escape") { document.querySelectorAll(".overlay").forEach((overlay) => overlay.classList.remove("open")); return; }
+      if (document.querySelector(".overlay.open")) return;
+      if (["ArrowLeft", "ArrowRight", " "].includes(event.key)) event.preventDefault();
+      if (event.key === "ArrowLeft") setScene(sceneIndex - 1);
+      if (event.key === "ArrowRight") setScene(sceneIndex + 1);
+      if (event.key === " ") advanceBeat();
+      if (event.key.toLowerCase() === "r") reset();
+      if (event.key.toLowerCase() === "n") { renderNotes(); toggleOverlay("notesOverlay"); }
+      if (event.key === "?") toggleOverlay("helpOverlay");
+    });
+    setScene(0);
+  </script>
+</body>
+</html>
