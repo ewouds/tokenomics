@@ -1,0 +1,5 @@
+openai>=1.60
+tiktoken
+numpy
+# optional, only for demo07b_cache_control.py
+anthropic

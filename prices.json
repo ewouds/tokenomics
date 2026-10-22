@@ -1,0 +1,6 @@
+{
+  "_comment": "USD per 1M tokens. Fill in the CURRENT list prices for your region from the Azure pricing page before the session. null = not configured.",
+  "gpt-5.4":      {"input": null, "cached_input": null, "output": null},
+  "gpt-5.4-mini": {"input": null, "cached_input": null, "output": null},
+  "gpt-4o":       {"input": null, "cached_input": null, "output": null}
+}
