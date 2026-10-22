@@ -3,3 +3,5 @@ tiktoken
 numpy
 # optional, only for demo07b_cache_control.py
 anthropic
+pytest
+jinja2
