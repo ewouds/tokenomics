@@ -125,7 +125,10 @@
 
   /* ---- 3 context history ---- */
   .history-explain { position: absolute; left: 110px; top: 270px; width: 1700px; font: 400 32px/1.4 var(--display); }
-  .chart { position: absolute; left: 110px; top: 350px; width: 1700px; }
+  .facepalm { position: absolute; top: 205px; right: 125px; display: flex; flex-direction: column; align-items: center; gap: 8px; opacity: 0; transform: translateY(8px) scale(.85); transition: opacity .45s, transform .45s; }
+  .facepalm.on { opacity: 1; transform: none; }
+  .facepalm-icon { font: 120px/1 "Segoe UI Emoji", "Apple Color Emoji", sans-serif; }
+  .facepalm-caption { font: 500 20px var(--mono); color: var(--hot);   letter-spacing: .04em; }  .chart { position: absolute; left: 110px; top: 350px; width: 1700px; }
   .chart h3 { font: 500 24px var(--mono); color: var(--dim); margin-bottom: 110px; opacity: 0; transition: opacity .6s; }
   .chart h3.on { opacity: 1; }
   .cols { display: flex; gap: 22px; align-items: flex-end; height: 320px; border-bottom: 3px solid var(--paper); }
@@ -140,13 +143,16 @@
   .col .increment.arrived, .col .increment.transferring { opacity: 1; }
   .col .increment.transferring strong { animation: carry-tokens .45s ease-in-out both; }
   .col .increment.transferring::after { animation: extend-arrow .45s ease-in-out both; transform-origin: left; }
+  .col.closing { outline: 2px solid var(--hot); outline-offset: 6px; }
   @keyframes carry-tokens { from { transform: translateX(-45%); } to { transform: translateX(45%); } }
   @keyframes extend-arrow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
   .labels { display: flex; gap: 22px; margin-top: 12px; font: 500 22px var(--mono); color: var(--dim); }
   .labels span { flex: 1; text-align: center; }
+  .labels .closing-label { color: var(--hot); }
   .key { display: flex; gap: 34px; margin-top: 24px; font: 500 22px var(--mono); opacity: 0; transition: opacity .6s; } .key.on { opacity: 1; }
   .key i { display: inline-block; width: 20px; height: 20px; margin-right: 10px; vertical-align: -3px; }
   .callout { margin-top: 26px; font: italic 400 40px var(--serif); color: var(--hot); opacity: 0; transition: opacity .7s; } .callout.on { opacity: 1; }
+  .callout.closing { font-size: 32px; }
 
   /* ---- 4 optimise ---- */
   .l4 { position: absolute; left: 110px; top: 350px; width: 1080px; }
@@ -345,10 +351,14 @@ const SC = [
     html: () => `<div class="tag">03 &nbsp;Context history</div>
       <h2>More conversation. <em>More input.</em></h2>
       <div class="history-explain rv" id="he">Every next turn carries the previous answer + prompt.</div>
-      <div class="chart"><h3 id="ch">INPUT TOKENS PER TURN</h3>
+    <div class="facepalm" id="facepalm" role="img" aria-label="Facepalm reaction with the words Thank you">
+      <span class="facepalm-icon" aria-hidden="true">🤦</span>
+      <span class="facepalm-caption" aria-hidden="true">Thank you!</span>
+    </div>
+    <div class="chart"><h3 id="ch">INPUT TOKENS PER TURN</h3>
         <div class="cols" id="cols"></div><div class="labels" id="lbls"></div>
         <div class="key" id="key"><span><i style="background:#6a6354"></i>starting context</span><span><i style="background:#b3a78b"></i>earlier prompts + answers</span><span><i style="background:var(--hot)"></i>current prompt</span></div>
-        <div class="callout" id="co">Same prompt- and responselength. +47% input by turn 8.</div></div>
+        <div class="callout" id="co">Same prompt- and responselength. +47% inputcontext by turn 8.</div></div>
       <div class="note">example: +12 prompt +300 answer per turn; history retained; hidden reasoning excluded</div>`,
     init() {
       const T8 = 8, base = inTok(START) - START.user, add = START.user + START.out, max = base + add * (T8 - 1) + START.user;
@@ -368,7 +378,34 @@ const SC = [
           T(() => { column.style.height = column.dataset.h + "px"; on(column); }, index ? 850 + (index - 1) * 800 : 0);
         });
       },
-      () => on($("#co"))
+      () => on($("#co")),
+      () => {
+        const endingTokens = 4;
+        const T8 = 8;
+        const base = inTok(START) - START.user, add = START.user + START.out;
+        const turn8 = base + add * (T8 - 1) + START.user, turn9 = base + add * T8 + endingTokens;
+        const previous = $("#cols .col:last-child"), increment = document.createElement("span");
+        increment.className = "increment";
+        increment.innerHTML = `<strong>+${fmt(turn9 - turn8)} input tokens</strong>`;
+        previous.append(increment);
+        increment.classList.add(inst ? "arrived" : "transferring");
+
+        const column = document.createElement("div");
+        column.className = "col closing";
+        column.dataset.h = String(turn9 / turn8 * 300);
+        column.setAttribute("aria-label", `Turn 9: ${fmt(turn9)} input tokens; user says Thank you agent!`);
+        column.innerHTML = `<div class="b0" style="height:${base / turn9 * 100}%"></div><div class="b1" style="height:${add * T8 / turn9 * 100}%"></div><div class="b2" style="height:${endingTokens / turn9 * 100}%"></div><span class="x">${fmt(turn9)}</span>`;
+        $("#cols").append(column);
+        const label = document.createElement("span");
+        label.className = "closing-label";
+        label.textContent = "Turn 9";
+        $("#lbls").append(label);
+        T(() => { column.style.height = column.dataset.h + "px"; on(column); }, 50);
+
+        $("#co").textContent = `“Thank you agent!” (~${endingTokens} tokens) sends ${fmt(turn9)} additional (useless) tokens`;
+        $("#co").classList.add("closing");
+        on($("#facepalm"));
+      }
     ]
   },
   {
