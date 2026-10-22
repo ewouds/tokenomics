@@ -1,0 +1,547 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tokenomics</title>
+<style>
+  :root {
+    --ink: #0e0d0b; --ink-2: #181612; --paper: #efe7d6; --dim: #8a8374; --hot: #ff5a1f; --save: #a8cf45;
+    --display: "Bahnschrift", "Arial Narrow", "Segoe UI", sans-serif;
+    --serif: Georgia, "Times New Roman", serif;
+    --mono: Consolas, "Courier New", monospace;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { width: 100%; height: 100%; background: var(--ink); overflow: hidden; cursor: none; }
+  #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; background: var(--ink); color: var(--paper); font-family: var(--display); overflow: hidden; }
+  .scene { position: absolute; inset: 0; padding: 92px 110px; opacity: 0; animation: in .7s ease forwards; }
+  .scene.noanim { animation: none; opacity: 1; }
+  @keyframes in { to { opacity: 1; } }
+  .inst *, .inst *::before, .inst *::after { transition: none !important; animation: none !important; }
+  .tag { font: 600 22px var(--mono); letter-spacing: .28em; color: var(--hot); text-transform: uppercase; }
+  .note { position: absolute; left: 110px; bottom: 50px; font: 400 20px var(--mono); color: var(--dim); letter-spacing: .08em; }
+  h2 { position: absolute; left: 110px; top: 150px; font: 400 76px/1.05 var(--serif); }
+  h2 em { color: var(--hot); }
+  #bar { position: absolute; left: 0; bottom: 0; height: 4px; background: var(--hot); transition: width .5s ease; }
+  #dots { position: absolute; right: 40px; bottom: 22px; display: flex; gap: 8px; }
+  #dots i { width: 9px; height: 9px; border-radius: 50%; background: #2c2923; }
+  #dots i.on { background: var(--dim); }
+
+  /* shared reveal */
+  .rv { opacity: 0; transition: opacity .6s, transform .6s; }
+  .rv.on { opacity: 1; }
+  .chapter-recap { position: absolute; left: 110px; top: 330px; font: 400 44px/1.3 var(--serif); color: var(--dim); }
+  .chapter-title { top: 440px; font: 400 140px/1.1 var(--serif); }
+  .chapter-title em { color: var(--save); }
+
+  /* ---- cover ---- */
+  .cover-title { position: absolute; left: 100px; top: 230px; font: 400 325px/1 var(--serif); letter-spacing: -.02em; }
+  .cover-rule { position: absolute; left: 110px; top: 640px; width: 1700px; height: 6px; background: var(--hot); }
+  .cover-sub { position: absolute; left: 110px; top: 690px; font: italic 400 84px/1.2 var(--serif); color: var(--paper); }
+  .cover-sub em { color: var(--hot); }
+  .cover-meta { position: absolute; left: 110px; bottom: 50px; width: 1700px; padding-top: 18px; border-top: 1px solid #2a2721; display: flex; justify-content: space-between; font: 400 26px var(--mono); color: var(--dim); }
+  .cover-meta b { color: var(--paper); font-weight: 600; }
+
+  /* ---- 1 tokens ---- */
+  .sentence { position: absolute; left: 110px; top: 350px; font: 400 70px/1.5 var(--serif); white-space: pre; }
+  .pbox { position: absolute; left: 80px; top: 290px; width: 1760px; height: 190px; border: 2px solid #3a362d; border-radius: 6px; background: #121110; }
+  .plabel { position: absolute; left: 80px; top: 238px; font: 600 26px var(--mono); letter-spacing: .3em; color: var(--hot); }
+  .sentence .t { display: inline-block; position: relative; border-radius: 4px; transition: margin .5s, padding .5s, background .5s, box-shadow .5s; }
+  .sentence .t.cut { margin-right: 10px; padding: 0 9px; background: var(--ink-2); box-shadow: inset 0 -4px 0 var(--hot); }
+  .sentence .t i { position: absolute; left: 0; right: 0; top: -34px; text-align: center; font: 600 22px var(--mono); color: var(--hot); opacity: 0; transition: opacity .3s; font-style: normal; }
+  .sentence .t.cut i { opacity: 1; }
+  .count { position: absolute; left: 0; width: 1920px; text-align: center; top: 640px; font: 700 300px/1 var(--display); letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+  .count small { font: 500 44px var(--mono); color: var(--dim); letter-spacing: 0; margin-left: 24px; }
+
+  /* ---- cells / blocks ---- */
+  .cells, .blocks { position: relative; display: flex; flex-wrap: wrap; gap: var(--gap); }
+  .c, .bk { flex: 0 0 auto; border-radius: 3px; transform: scale(0); opacity: 0; transition: transform .35s cubic-bezier(.3,1.6,.5,1), opacity .3s, width .45s, margin .45s; position: relative; }
+  .c.on, .bk.on { transform: scale(1); opacity: 1; }
+  .c.gone, .bk.gone { width: 0 !important; margin-right: calc(var(--gap) * -1); transform: scale(0); opacity: 0; }
+  #g4 .c, #b4 .bk { transition: background-color 1.5s ease, border-color 1.5s ease, box-shadow 1.5s ease; }
+  #g4 .c.removed, #b4 .bk.removed { background: transparent !important; border: 1px solid var(--dim); box-shadow: none; }
+  #g4 .c.removed::after { display: none; }
+  #g4 .c.optimizing, #b4 .bk.optimizing { box-shadow: 0 0 0 2px var(--paper); }
+  #g4 .c.removed.optimizing, #b4 .bk.removed.optimizing { border-color: var(--hot); }
+  .l4 .legend div.optimizing, .l4 .legend div.optimizing [data-n] { color: var(--hot); }
+  .c.cache::after { content: ""; position: absolute; inset: 0; border-radius: 3px; background: repeating-linear-gradient(-45deg, rgba(168,207,69,.95) 0 4px, transparent 4px 9px); mix-blend-mode: multiply; }
+  .c.hit { box-shadow: 0 0 0 4px var(--hot), 0 0 26px 6px rgba(255,90,31,.6); }
+  .bk.ans { background: var(--hot); }
+  .bk.th { border: 3px dashed var(--hot); }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px 40px; font: 500 24px var(--mono); }
+  .legend div { opacity: 0; transition: opacity .6s; display: flex; align-items: center; gap: 12px; }
+  .legend div.on { opacity: 1; }
+  .legend i { width: 22px; height: 22px; border-radius: 3px; display: inline-block; }
+  .legend b { color: var(--dim); font-weight: 400; }
+
+  /* ---- 2 request ---- */
+  .big { position: absolute; right: 110px; top: 112px; text-align: right; font: 700 168px/1 var(--display); letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+  .big small { display: block; font: 500 26px var(--mono); color: var(--dim); letter-spacing: .12em; text-transform: uppercase; margin-top: 4px; }
+  .out-n { position: absolute; right: 110px; top: 112px; width: 680px; font: 700 220px/1 var(--display); font-variant-numeric: tabular-nums; letter-spacing: 0; color: var(--paper); text-align: right; opacity: 0; transition: opacity .6s; }
+  .out-n small { display: block; margin-top: 8px; font: 500 32px/1 var(--mono); color: var(--dim); }
+  .out-n.on { opacity: 1; }
+  .g2 { position: absolute; left: 110px; top: 430px; width: 1700px; --gap: 5px; }
+  .g2 .c { width: 22px; height: 22px; }
+  .you { position: absolute; opacity: 0; transition: opacity .5s; font: 600 26px var(--mono); color: var(--hot); white-space: nowrap; }
+  .you::after { content: ""; position: absolute; left: 0; top: 36px; width: 3px; height: 40px; background: var(--hot); }
+  .you.on { opacity: 1; }
+  .lg2 { position: absolute; left: 110px; top: 560px; width: 1700px; }
+  .out2 { position: absolute; left: 110px; top: 660px; width: 1700px; opacity: 0; transition: opacity .6s; }
+  .out2.on { opacity: 1; }
+  .out2 .lbl { font: 500 22px var(--mono); color: var(--dim); margin-bottom: 14px; letter-spacing: .05em; }
+  .out2 .sum { position: absolute; right: 0; top: -56px; font: 700 34px/1 var(--display); color: var(--hot); letter-spacing: -.03em; opacity: 0; transition: opacity .6s; text-align: right; }
+  .out2 .sum.on { opacity: 1; }
+  .out2 .legend2 { display: flex; gap: 28px; margin-top: 16px; font: 500 22px var(--mono); color: var(--dim); opacity: 0; transition: opacity .6s; }
+  .out2 .legend2.on { opacity: 1; }
+  .out2 .legend2 span { display: flex; align-items: center; gap: 10px; opacity: 0; transition: opacity .5s; }
+  .out2 .legend2 span.on { opacity: 1; }
+  .out2 .legend2 i { width: 18px; height: 18px; border-radius: 3px; display: inline-block; }
+  .out2 .legend2 .thk { background: var(--hot); }
+  .out2 .legend2 .reas { background: transparent; border: 3px dashed var(--hot); }
+  .out2 .blocks { --gap: 8px; }
+  .out2 .bk { width: 56px; height: 56px; }
+  .out2 .bk.ans {
+    background-color: var(--hot);
+    background-image:
+      linear-gradient(90deg, transparent calc(50% - 1px), rgba(255,255,255,.28) calc(50% - 1px), rgba(255,255,255,.28) calc(50% + 1px), transparent calc(50% + 1px)),
+      linear-gradient(transparent calc(50% - 1px), rgba(255,255,255,.28) calc(50% - 1px), rgba(255,255,255,.28) calc(50% + 1px), transparent calc(50% + 1px));
+    box-shadow: inset 0 0 0 2px rgba(14, 13, 11, .08);
+  }
+  .out2 .bk.th {
+    background-color: rgba(255,90,31,.14);
+    background-image:
+      linear-gradient(90deg, transparent calc(50% - 1px), rgba(255,90,31,.78) calc(50% - 1px), rgba(255,90,31,.78) calc(50% + 1px), transparent calc(50% + 1px)),
+      linear-gradient(transparent calc(50% - 1px), rgba(255,90,31,.78) calc(50% - 1px), rgba(255,90,31,.78) calc(50% + 1px), transparent calc(50% + 1px));
+    border: 3px dashed rgba(255,90,31,.92);
+    box-shadow: inset 0 0 0 2px rgba(14, 13, 11, .06);
+  }
+
+  /* ---- 3 credits ---- */
+  .credit-quote { position: absolute; left: 850px; top: 510px; width: 960px; font: italic 400 44px/1.3 var(--serif); color: var(--hot); }
+  .history-explain { position: absolute; left: 110px; top: 270px; width: 1700px; font: 400 32px/1.4 var(--display); }
+  .receipt { position: absolute; left: 110px; top: 330px; width: 620px; padding: 40px 44px 66px; background: var(--paper); color: #1a1814; font: 500 29px/1.65 var(--mono);
+    -webkit-mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 26px 100%; mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 26px 100%; }
+  .receipt .ln { display: flex; justify-content: space-between; opacity: 0; transform: translateY(-8px); transition: opacity .35s, transform .35s; white-space: pre; }
+  .receipt .ln.on { opacity: 1; transform: none; }
+  .receipt .sub { font-size: 22px; color: #6a6354; line-height: 1.3; margin-bottom: 4px; }
+  .receipt .rule { border-top: 3px dashed #1a1814; margin: 10px 0; opacity: 0; transition: opacity .35s; } .receipt .rule.on { opacity: 1; }
+  .receipt .tot { font: 700 44px/1.5 var(--mono); } .receipt .hot { color: #d8400b; }
+  .chart { position: absolute; left: 110px; top: 350px; width: 1700px; }
+  .chart h3 { font: 500 24px var(--mono); color: var(--dim); margin-bottom: 110px; opacity: 0; transition: opacity .6s; }
+  .chart h3.on { opacity: 1; }
+  .cols { display: flex; gap: 22px; align-items: flex-end; height: 320px; border-bottom: 3px solid var(--paper); }
+  .col { flex: 1; display: flex; flex-direction: column-reverse; height: 0; transition: height .5s cubic-bezier(.3,.7,.2,1); position: relative; }
+  .col div { width: 100%; } .col .b0 { background: #6a6354; } .col .b1 { background: #b3a78b; } .col .b2 { background: var(--hot); }
+  .col .x { position: absolute; width: 140%; left: -20%; top: -40px; text-align: center; font: 600 24px var(--mono); opacity: 0; transition: opacity .5s .5s; }
+  .col.on .x { opacity: 1; }
+  .col .increment { position: absolute; left: 50%; top: -110px; width: calc(100% + 22px); text-align: center; color: var(--hot); opacity: 0; }
+  .col .increment strong { display: block; font: 600 24px/1.2 var(--mono); white-space: nowrap; transform: translateX(45%); }
+  .col .increment::after { content: ''; display: block; margin-top: 12px; width: 100%; border-top: 3px solid var(--hot); }
+  .col .increment::before { content: ''; position: absolute; right: 0; bottom: -5px; width: 10px; height: 10px; border-top: 3px solid var(--hot); border-right: 3px solid var(--hot); transform: rotate(45deg); }
+  .col .increment.arrived, .col .increment.transferring { opacity: 1; }
+  .col .increment.transferring strong { animation: carry-tokens .45s ease-in-out both; }
+  .col .increment.transferring::after { animation: extend-arrow .45s ease-in-out both; transform-origin: left; }
+  @keyframes carry-tokens { from { transform: translateX(-45%); } to { transform: translateX(45%); } }
+  @keyframes extend-arrow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+  .labels { display: flex; gap: 22px; margin-top: 12px; font: 500 22px var(--mono); color: var(--dim); }
+  .labels span { flex: 1; text-align: center; }
+  .key { display: flex; gap: 34px; margin-top: 24px; font: 500 22px var(--mono); opacity: 0; transition: opacity .6s; } .key.on { opacity: 1; }
+  .key i { display: inline-block; width: 20px; height: 20px; margin-right: 10px; vertical-align: -3px; }
+  .callout { margin-top: 26px; font: italic 400 40px var(--serif); color: var(--hot); opacity: 0; transition: opacity .7s; } .callout.on { opacity: 1; }
+
+  /* ---- 4 optimise ---- */
+  .l4 { position: absolute; left: 110px; top: 350px; width: 1080px; }
+  .l4 .input-label { font: 500 20px var(--mono); color: var(--dim); margin-bottom: 18px; }
+  .g4 { --gap: 6px; } .g4 .c { width: 28px; height: 28px; }
+  .l4 .legend { margin-top: 26px; gap: 10px 28px; font-size: 20px; opacity: 1; }
+  .l4 .legend div { opacity: 1; } .l4 .legend i { width: 18px; height: 18px; }
+  .out4 { margin-top: 40px; padding-top: 28px; border-top: 1px solid #2c2923; } .out4 .lbl { font: 500 20px var(--mono); color: var(--dim); margin-bottom: 18px; }
+  .out4 .blocks { --gap: 6px; } .out4 .bk { width: 44px; height: 44px; }
+  .r4 { position: absolute; left: 1290px; top: 112px; width: 520px; }
+  .score-l { font: 500 24px var(--mono); color: var(--dim); letter-spacing: .1em; }
+  .score { font: 700 190px/1 var(--display); letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+  .delta { font: 700 44px var(--mono); color: var(--save); height: 56px; }
+  .toks { font: 500 24px/1.5 var(--mono); color: var(--dim); } .toks b { color: var(--paper); font-weight: 600; }
+  .levers { margin-top: 22px; list-style: none; padding: 0; }
+  .levers li { font: 500 29px/1 var(--display); padding: 15px 0 15px 54px; border-top: 1px solid #2c2923; color: #5a5548; position: relative; transition: color .5s; }
+  .levers li::before { content: ""; position: absolute; left: 6px; top: 50%; width: 22px; height: 22px; margin-top: -11px; border: 3px solid #4a463b; border-radius: 50%; transition: all .5s; }
+  .levers li.on { color: var(--paper); } .levers li.on::before { background: var(--save); border-color: var(--save); }
+  .levers li.now { color: var(--hot); } .levers li.now::before { background: var(--hot); border-color: var(--hot); }
+
+  /* ---- effort comparison ---- */
+  .effort-prompt { position: absolute; left: 110px; top: 250px; width: 1700px; font: 400 40px/1.3 var(--serif); color: var(--paper); display: flex; align-items: baseline; gap: 28px; }
+  .effort-prompt span { font: 500 20px var(--mono); color: var(--dim); letter-spacing: .08em; white-space: nowrap; }
+  .effort-results { position: absolute; left: 60px; top: 350px; width: 1800px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+  .effort-result { min-width: 0; background: var(--ink-2); border-top: 4px solid var(--dim); padding: 18px 16px 16px; transform: translateY(20px); }
+  .effort-result.e-mid { border-color: var(--paper); }
+  .effort-result.e-max { border-color: var(--hot); }
+  .effort-result.on { transform: none; }
+  .effort-result figcaption { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; }
+  .effort-result figcaption b { font: 400 52px/1 var(--serif); }
+  .effort-result.e-max figcaption b { color: var(--hot); }
+  .effort-result figcaption span { font: 500 26px var(--mono); color: var(--dim); }
+  .effort-result img { display: block; width: 100%; height: auto; object-fit: contain; object-position: top left; border: 1px solid #2a2721; }
+  .effort-result p { margin-top: 16px; font: 400 24px/1.25 var(--serif); color: var(--dim); }
+  .effort-result p b { display: block; font: 600 26px var(--mono); color: var(--paper); margin-bottom: 4px; }
+  .effort-message { position: absolute; left: 110px; top: 860px; width: 1700px; font: italic 400 44px/1.2 var(--serif); color: var(--save); }
+  .effort-source { letter-spacing: 0; font-size: 18px; }
+
+  /* ---- right model ---- */
+  .tiers { position: absolute; left: 110px; top: 290px; width: 1700px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 30px; }
+  .tier { position: relative; border-top: 4px solid var(--dim); background: var(--ink-2); padding: 22px 32px 20px; transform: translateY(20px); }
+  .tier.on { transform: none; }
+  .tier.t-mid { border-color: var(--paper); }
+  .tier.t-big { border-color: var(--hot); }
+  .tier h3 { font: 400 56px/1 var(--serif); margin: 0 0 8px; }
+  .tier .tag-line { font: 500 20px var(--mono); color: var(--dim); letter-spacing: .06em; margin-bottom: 14px; }
+  .tier .cost { position: absolute; top: 34px; right: 32px; font: 600 40px var(--mono); color: var(--save); }
+  .tier.t-big .cost { color: var(--hot); }
+  .tier ul { list-style: none; margin: 0; padding: 0; }
+  .tier .models { font: 500 22px var(--mono); color: var(--dim); padding-top: 12px; border-top: 1px solid #2a2721; }
+  .tier li { font: 400 27px/1.2 var(--serif); padding: 10px 0; border-top: 1px solid #2a2721; }
+  .tiers-message { position: absolute; left: 110px; top: 925px; width: 1700px; font: italic 400 44px/1.2 var(--serif); color: var(--save); }
+  .router { position: absolute; left: 110px; top: 630px; width: 1700px; }
+  .router svg { display: block; }
+  .rt-l { font: 400 32px var(--serif); fill: var(--paper); }
+  .rt-h { font: 600 32px var(--mono); fill: var(--hot); }
+  .rt-s { font: 400 22px var(--mono); fill: var(--paper); }
+  .rt-m { font: 400 22px var(--mono); fill: var(--dim); }
+
+  /* ---- 5 takeaway ---- */
+  .three { position: absolute; left: 110px; right: 110px; top: 50%; transform: translateY(-50%); text-align: center; }
+  .three div { font: 700 120px/1.2 var(--display); letter-spacing: -.035em; white-space: nowrap; text-transform: uppercase; opacity: 0; transform: translateX(-40px); transition: all .8s cubic-bezier(.2,.7,.2,1); }
+  .three div.on { opacity: 1; transform: none; } .three .accent { color: var(--hot); }
+</style>
+</head>
+<body>
+<div id="stage"><div id="view"></div><div id="dots"></div><div id="bar"></div></div>
+
+<script>
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const fmt = n => Math.round(n).toLocaleString("en-US");
+let run = 0, inst = false;
+
+function fit() {
+  const s = Math.min(innerWidth / 1920, innerHeight / 1080);
+  $("#stage").style.transform = `translate(${(innerWidth - 1920 * s) / 2}px, ${(innerHeight - 1080 * s) / 2}px) scale(${s})`;
+}
+addEventListener("resize", fit); fit();
+
+// Run fn now when replaying instantly, otherwise after ms, but only if the scene is still current.
+const T = (fn, ms) => {
+  if (inst || ms <= 0) return fn();
+  const id = run; setTimeout(() => { if (id === run) fn(); }, ms);
+};
+function count(el, to, ms, dec = 0) {
+  const from = parseFloat(el.dataset.v || 0), tok = el._c = (el._c || 0) + 1, show = v => { el.dataset.v = v; el.textContent = dec ? v.toFixed(dec) : fmt(v); };
+  if (inst || ms <= 0) return show(to);
+  const id = run, t0 = performance.now();
+  (function f(t) {
+    if (id !== run || tok !== el._c) return;
+    const p = Math.min(1, (t - t0) / ms); show(from + (to - from) * (1 - Math.pow(1 - p, 3)));
+    if (p < 1) requestAnimationFrame(f);
+  })(t0);
+}
+const on = el => el.classList.add("on");
+const reveal = (list, per = 12) => list.forEach((c, i) => T(() => on(c), i * per));
+
+/* ---- model of one request (illustrative) ---- */
+const PER = 25; // tokens per square
+const LAYERS = [
+  { k: "sys", n: "System prompt", c: "#5b7cf0" }, { k: "tools", n: "Tool definitions", c: "#b07be8" },
+  { k: "hist", n: "Conversation history", c: "#2fc4d6" }, { k: "files", n: "Retrieved files", c: "#f2c94c" },
+  { k: "user", n: "What you typed", c: "#ff5a1f" }
+];
+const START = { sys: 700, tools: 900, hist: 1200, files: 1800, user: 11, out: 300, think: 500, mult: 1, cache: false };
+const inTok = s => s.sys + s.tools + s.hist + s.files + s.user;
+const cachedTok = s => s.cache ? s.sys + s.tools : 0;
+const outTok = s => s.out + s.think;
+const cost = s => ((inTok(s) - cachedTok(s)) + 0.1 * cachedTok(s) + 4 * outTok(s)) / 1000 * s.mult;
+
+function buildCells(root) {
+  root.innerHTML = "";
+  LAYERS.forEach((l, g) => {
+    const n = l.k === "user" ? 1 : Math.round(START[l.k] / PER);
+    for (let i = 0; i < n; i++) { const c = document.createElement("i"); c.className = "c"; c.dataset.k = l.k; c.style.background = l.c; root.append(c); }
+  });
+}
+function buildBlocks(root) {
+  root.innerHTML = "";
+  [["out", "ans", START.out], ["think", "th", START.think]].forEach(([k, cls, tok]) => {
+    for (let i = 0; i < tok / PER; i++) { const b = document.createElement("i"); b.className = `bk ${cls}`; b.dataset.k = k; root.append(b); }
+  });
+}
+const legendHTML = () => `<div class="legend">${LAYERS.map(l => `<div data-k="${l.k}"><i style="background:${l.c}"></i>${l.n} <b data-n>${fmt(START[l.k])}</b></div>`).join("")}</div>`;
+
+/* ---------------------------------- scenes ---------------------------------- */
+const SC = [
+  { // cover
+    still: true,
+    html: () => `<div class="tag">How AI usage adds up</div>
+      <h1 class="cover-title">Tokenomics</h1>
+      <div class="cover-rule"></div>
+      <p class="cover-sub">Every word has a price. <em>Spend it well.</em></p>
+      <div class="cover-meta"><b>Ewoud Smets</b><span>Oct 26</span></div>`,
+    init() {},
+    steps: []
+  },
+  { // 1 · tokens
+    html: () => `<div class="tag">01 &nbsp;Tokens</div><div class="plabel">PROMPT</div><div class="pbox"></div><div class="sentence" id="sen"></div>
+      <div class="count"><span id="cnt">0</span><small>tokens</small></div>
+      <div class="note">split as in OpenAI's o200k tokenizer &nbsp;·&nbsp; other models split differently</div>`,
+    init() {
+      this.parts = ["Summ", "ar", "ize", " Cald", "ova", "'s", " Azure", " growth", " this", " quarter", "."];
+      $("#sen").innerHTML = this.parts.map(p => `<span class="t">${p}<i></i></span>`).join("");
+    },
+    steps: [
+      function () { // cut the sentence into tokens
+        const sen = $("#sen"), p = SC[1].parts;
+        p.forEach((t, i) => T(() => {
+          const s = sen.children[i]; s.firstChild.nodeValue = t.trim(); s.querySelector("i").textContent = i + 1;
+          s.classList.add("cut"); $("#cnt").textContent = i + 1;
+        }, i * 260));
+      }
+    ]
+  },
+  { // 2 · one request
+    html: () => `<div class="tag">02 &nbsp;One request</div>
+      <h2>What you typed is the<br><em>tip</em> of the request.</h2>
+      <div class="out-n" id="outn"><span id="tout">0</span><small>tokens</small></div>
+      <div class="g2 cells" id="g2"></div><div class="you" id="you">you typed this</div>
+      <div class="lg2">${legendHTML()}</div>
+      <div class="out2" id="out2"><div class="lbl">THE ANSWER · BILLED AS OUTPUT · each block is also 25 tokens, but output costs about 4× more per token</div><div class="blocks" id="b2"></div><div class="legend2" id="outleg"><span><i class="thk"></i>answer tokens <b>300</b></span><span><i class="reas"></i>reasoning tokens <b>500</b></span></div></div>
+      <div class="note">1 square = 25 tokens &nbsp;·&nbsp; illustrative numbers</div>`,
+    init() { buildCells($("#g2")); buildBlocks($("#b2")); },
+    steps: (() => {
+      const cum = [700, 1600, 2800, 4600];
+      const layer = g => () => {
+        const k = LAYERS[g].k;
+        reveal($$(`#g2 .c[data-k="${k}"]`), 14); on($(`.lg2 [data-k="${k}"]`)); on($("#outn")); count($("#tout"), cum[g], 900);
+      };
+      return [
+        layer(0),
+        layer(1),
+        layer(2),
+        layer(3),
+        () => { // your input
+          const c = $('#g2 .c[data-k="user"]'); on(c); c.classList.add("hit");
+          const y = $("#you"), g = $("#g2"); y.style.left = (g.offsetLeft + c.offsetLeft - 4) + "px"; y.style.top = (g.offsetTop + c.offsetTop - 84) + "px"; on(y);
+          on($('.lg2 [data-k="user"]')); count($("#tout"), inTok(START), 500);
+        },
+        () => {
+          on($("#out2")); on($("#outleg")); on($("#outleg span:first-child"));
+          reveal($$("#b2 .bk.ans"), 60); count($("#tout"), inTok(START) + 300, 900);
+        },
+        () => {
+          on($("#outleg span:last-child"));
+          reveal($$("#b2 .bk.th"), 60); count($("#tout"), inTok(START) + 800, 1200);
+        }
+      ];
+    })()
+  },
+  { // 3 · credits
+    html: () => `<div class="tag">03 &nbsp;Credits</div>
+      <h2>From tokens to <em>credits.</em></h2>
+      <div class="receipt" id="rc">
+        <div class="ln"><span>INPUT</span><span>${fmt(inTok(START))} tok</span></div><div class="ln"><span>&nbsp;&nbsp;credits / 1k</span><span>1</span></div>
+        <div class="ln"><span>OUTPUT</span><span>800 tok</span></div><div class="ln sub"><span>&nbsp;&nbsp;300 shown + 500 reasoning</span><span></span></div>
+        <div class="ln"><span>&nbsp;&nbsp;credits / 1k</span><span class="hot">4</span></div><div class="ln"><span>MODEL TIER</span><span>×1.0</span></div><div class="rule"></div>
+        <div class="ln tot"><span>CREDITS</span><span class="hot" id="rt">0.00</span></div>
+      </div>
+      <blockquote class="credit-quote rv" id="cq">Credits are your service's usage units.</blockquote>
+      <div class="note">illustrative rates, not a price list</div>`,
+    init() {},
+    steps: [
+      () => { $$("#rc > *").forEach((e, i) => T(() => on(e), i * 380)); T(() => count($("#rt"), cost(START), 1200, 2), 7 * 380); },
+      () => on($("#cq"))
+    ]
+  },
+  { // 4 · context history
+    html: () => `<div class="tag">04 &nbsp;Context history</div>
+      <h2>More conversation. <em>More input.</em></h2>
+      <div class="history-explain rv" id="he">Every next turn carries the previous answer + prompt.</div>
+      <div class="chart"><h3 id="ch">INPUT TOKENS PER TURN</h3>
+        <div class="cols" id="cols"></div><div class="labels" id="lbls"></div>
+        <div class="key" id="key"><span><i style="background:#6a6354"></i>starting context</span><span><i style="background:#b3a78b"></i>earlier prompts + answers</span><span><i style="background:var(--hot)"></i>current prompt</span></div>
+        <div class="callout" id="co">Same prompt + response length. +47% input by turn 8.</div></div>
+      <div class="note">example: +11 prompt +300 answer per turn; history retained; hidden reasoning excluded</div>`,
+    init() {
+      const T8 = 8, base = inTok(START) - START.user, add = START.user + START.out, max = base + add * (T8 - 1) + START.user;
+      $("#cols").innerHTML = Array.from({ length: T8 }, (_, i) => {
+        const t = base + add * i + START.user;
+        return `<div class="col" data-h="${t / max * 300}" aria-label="Turn ${i + 1}: ${fmt(t)} input tokens; ${fmt(add * i)} from earlier prompts and answers"><div class="b0" style="height:${base / t * 100}%"></div><div class="b1" style="height:${add * i / t * 100}%"></div><div class="b2" style="height:${START.user / t * 100}%"></div><span class="x">${fmt(t)}</span>${i < T8 - 1 ? `<span class="increment"><strong>+${add} tokens</strong></span>` : ""}</div>`;
+      }).join("");
+      $("#lbls").innerHTML = Array.from({ length: T8 }, (_, i) => `<span>Turn ${i + 1}</span>`).join("");
+    },
+    steps: [
+      () => on($("#he")),
+      () => {
+        on($("#ch")); on($("#key"));
+        const columns = $$("#cols .col");
+        columns.forEach((column, index) => {
+          if (index) T(() => columns[index - 1].querySelector(".increment").classList.add(inst ? "arrived" : "transferring"), 450 + (index - 1) * 800);
+          T(() => { column.style.height = column.dataset.h + "px"; on(column); }, index ? 850 + (index - 1) * 800 : 0);
+        });
+      },
+      () => on($("#co"))
+    ]
+  },
+  {
+    html: () => `<div class="tag">05 &nbsp;From understanding to action</div>
+      <p class="chapter-recap">Now you know what adds up.</p>
+      <h2 class="chapter-title rv" id="optimise-intro">Let's <em>optimise.</em></h2>`,
+    init() {},
+    steps: [() => on($("#optimise-intro"))]
+  },
+  { // 6 · optimise
+    html: () => `<div class="tag">06 &nbsp;Optimise</div>
+      <h2>Same answer.<br><em>Lighter</em> request.</h2>
+      <div class="l4"><div class="input-label">REQUEST CONTEXT (INPUT)</div><div class="g4 cells" id="g4"></div>${legendHTML()}
+        <div class="out4"><div class="lbl">ANSWER + REASONING (OUTPUT)</div><div class="blocks" id="b4"></div></div></div>
+      <div class="r4"><div class="score-l">CREDITS PER REQUEST</div><div class="score" id="sc">0.00</div><div class="delta" id="dl"></div>
+        <div class="toks">input <b id="ti">0</b> <span id="tc"></span><br>output <b id="to">0</b></div>
+        <ul class="levers" id="lv"><li>Fresh chat per task</li><li>Retrieve only what's relevant</li><li>Shorten instructions. Include fewer tools.</li><li>Write a clear spec</li><li>Cache the stable prefix</li><li>Right-size model + effort</li><li>Cap the answer length</li></ul></div>
+      <div class="note">1 square = 25 tokens &nbsp;·&nbsp; illustrative numbers</div>`,
+    init() {
+      buildCells($("#g4")); buildBlocks($("#b4")); reveal($$("#g4 .c, #b4 .bk"), 0);
+      $$(".l4 .legend div").forEach(d => d.classList.add("on"));
+      this.s = { ...START }; this.base = cost(START);
+      this.draw(this.s, true);
+    },
+    draw(s, first) {
+      const set = (sel, keep) => $$(sel).forEach((el, i) => el.classList.toggle("removed", i >= keep));
+      ["sys", "tools", "hist", "files"].forEach(k => set(`#g4 .c[data-k="${k}"]`, Math.round(s[k] / PER)));
+      set('#b4 .bk[data-k="out"]', Math.round(s.out / PER)); set('#b4 .bk[data-k="think"]', Math.round(s.think / PER));
+      $$("#g4 .c").forEach(c => c.classList.toggle("cache", s.cache && (c.dataset.k === "sys" || c.dataset.k === "tools")));
+      LAYERS.forEach(l => { const n = $(`.l4 .legend [data-k="${l.k}"] [data-n]`); if (n) n.textContent = fmt(s[l.k]); });
+      count($("#sc"), cost(s), first ? 0 : 2000, 2); count($("#ti"), inTok(s), first ? 0 : 2000); count($("#to"), outTok(s), first ? 0 : 2000);
+      $("#tc").textContent = s.cache ? `(${fmt(cachedTok(s))} cached)` : "";
+      $("#dl").textContent = first ? "" : "−" + Math.round((1 - cost(s) / this.base) * 100) + "%";
+    },
+    steps: (() => {
+      const lever = (i, mut) => () => {
+        const sc = SC[6], li = $$("#lv li"); li.forEach(e => e.classList.remove("now")); li[i].classList.add("on", "now");
+        const before = { ...sc.s };
+        mut(sc.s);
+        $$(".l4 .optimizing").forEach(el => el.classList.remove("optimizing"));
+        ["sys", "tools", "hist", "files", "out", "think"].forEach(key => {
+          const cached = !before.cache && sc.s.cache && (key === "sys" || key === "tools");
+          const keep = Math.round(sc.s[key] / PER), previous = Math.round(before[key] / PER);
+          const root = key === "out" || key === "think" ? "#b4 .bk" : "#g4 .c";
+          $$(`${root}[data-k="${key}"]`).forEach((el, index) => {
+            el.classList.toggle("optimizing", cached ? index < keep : index >= keep && index < previous);
+          });
+          const label = $(`.l4 .legend [data-k="${key}"]`);
+          if (label) label.classList.toggle("optimizing", cached || keep < previous);
+        });
+        sc.draw(sc.s, false);
+      };
+      return [
+        lever(0, s => { s.hist = 400; }), lever(1, s => { s.files = 800; }), lever(2, s => { s.tools = 600; s.sys = 500; }),
+        lever(3, s => { s.think = 350; }), lever(4, s => { s.cache = true; }), lever(5, s => { s.mult = 0.8; s.think = 200; }),
+        lever(6, s => { s.out = 240; })
+      ];
+    })()
+  },
+  { // 7 · effort comparison
+    html: () => `<div class="tag">07 &nbsp;Effort</div>
+      <h2>Same prompt. <em>Different effort.</em></h2>
+      <p class="effort-prompt"><span>ONE PROMPT · OPUS 5.5 · 3 OF 4 LEVELS</span>"Build a personal fitness and workout tracker app"</p>
+      <div class="effort-results">
+        <figure class="effort-result e-low rv" id="effort-low"><figcaption><b>Low</b><span>1.5 min</span></figcaption><img src="assets/effort-low.png" alt="Low-effort result: Liftlog, a set-entry form with one weekly volume chart and personal records" width="1849" height="1165"></figure>
+        <figure class="effort-result e-mid rv" id="effort-medium"><figcaption><b>Medium</b><span>4 min</span></figcaption><img src="assets/effort-medium.png" alt="Medium-effort result: Plate Log, with workout types, weekly goals and a multi-activity chart" width="1851" height="1135"></figure>
+        <figure class="effort-result e-max rv" id="effort-max"><figcaption><b>Max</b><span>67 min</span></figcaption><img src="assets/effort-max.png" alt="Max-effort result: Iron Ledger, with navigation, a weekly barbell tracker, routines and stats" width="1854" height="1147"></figure>
+      </div>
+      <p class="effort-message rv" id="effort-message">Effort sets how much the AI decides, builds and verifies on its own.<br>A clear spec narrows the gap.</p>
+      <div class="note effort-source">Source: Thariq Shihipar · claude.dev/blog/spending-your-effort · Individual runs; author-reported times, not token costs.</div>`,
+    init() {},
+    steps: [
+      () => on($("#effort-low")), () => on($("#effort-medium")), () => on($("#effort-max")),
+      () => on($("#effort-message"))
+    ]
+  },
+  { // 8 · right model for the task
+    html: () => `<div class="tag">08 &nbsp;Model choice</div>
+      <h2>Right model. <em>Right task.</em></h2>
+      <div class="tiers">
+        <div class="tier t-small rv" id="tier-small"><h3>Small</h3><div class="tag-line">FAST · CHEAP · NARROW</div><div class="cost">$</div>
+          <ul><li>Classify support tickets by topic</li></ul><div class="models">e.g. GPT-4o mini · Claude Haiku</div></div>
+        <div class="tier t-mid rv" id="tier-mid"><h3>Mid</h3><div class="tag-line">BALANCED · EVERYDAY WORK</div><div class="cost">$$</div>
+          <ul><li>Coding: features, tests, refactors</li></ul><div class="models">e.g. GPT-4.1 · Claude Sonnet</div></div>
+        <div class="tier t-big rv" id="tier-big"><h3>Frontier</h3><div class="tag-line">DEEPEST REASONING · SLOWEST</div><div class="cost">$$$$</div>
+          <ul><li>Hard bugs across a large codebase</li></ul><div class="models">e.g. GPT-5 · Claude Opus</div></div>
+      </div>
+      <div class="router rv" id="tier-router"><svg viewBox="0 0 1700 270" width="1700" height="270" role="img" aria-label="A prompt enters the model router, which sends it to a small, mid or frontier model">
+        <rect x="2" y="95" width="320" height="80" fill="none" stroke="#efe7d6" stroke-width="2"/><text x="162" y="146" text-anchor="middle" class="rt-l">Your prompt</text>
+        <path d="M322 135H556" stroke="#8a8374" stroke-width="3"/><path d="M556 135l-16-10v20z" fill="#8a8374"/>
+        <rect x="560" y="60" width="400" height="150" fill="#181612" stroke="#ff5a1f" stroke-width="3"/>
+        <text x="760" y="108" text-anchor="middle" class="rt-h">MODEL ROUTER</text><text x="760" y="146" text-anchor="middle" class="rt-s">Copilot auto model selection</text><text x="760" y="185" text-anchor="middle" class="rt-m">scores the task complexity</text>
+        <path d="M960 135C1100 135 1120 43 1256 43" fill="none" stroke="#8a8374" stroke-width="3"/><path d="M960 135H1256" fill="none" stroke="#efe7d6" stroke-width="3"/><path d="M960 135C1100 135 1120 227 1256 227" fill="none" stroke="#ff5a1f" stroke-width="3"/>
+        <rect x="1260" y="10" width="440" height="66" fill="none" stroke="#8a8374" stroke-width="2"/><text x="1290" y="54" class="rt-l">Easy → Small</text>
+        <rect x="1260" y="102" width="440" height="66" fill="none" stroke="#efe7d6" stroke-width="2"/><text x="1290" y="146" class="rt-l">Typical → Mid</text>
+        <rect x="1260" y="194" width="440" height="66" fill="none" stroke="#ff5a1f" stroke-width="2"/><text x="1290" y="238" class="rt-l">Hard → Frontier</text></svg></div>
+      <p class="tiers-message rv" id="tiers-message">Not every task needs a frontier model.</p>`,
+    init() {},
+    steps: [
+      () => on($("#tier-small")), () => on($("#tier-mid")), () => on($("#tier-big")), () => on($("#tier-router")), () => on($("#tiers-message"))
+    ]
+  },
+  { // 9 · takeaway
+    html: () => `<div class="tag">09 &nbsp;Takeaway</div>
+      <div class="three"><div>Send less.</div><div><span class="accent">Spend where</span> it matters.</div></div>`,
+    init() {},
+    steps: [
+      () => on($(".three div:nth-child(1)")), () => on($(".three div:nth-child(2)"))
+    ]
+  }
+];
+
+/* --------------------------------- presenter ---------------------------------- */
+let si = -1, st = 0;
+const total = SC.reduce((a, s) => a + s.steps.length + 1, 0);
+const offsets = SC.map((_, i) => SC.slice(0, i).reduce((a, s) => a + s.steps.length + 1, 0));
+
+function hud() {
+  $("#bar").style.width = ((offsets[si] + st + 1) / total * 100) + "%";
+  $("#dots").innerHTML = SC[si].steps.map((_, i) => `<i class="${i < st ? "on" : ""}"></i>`).join("");
+}
+// Rebuild scene i and apply its first k steps instantly (used for entering a scene and for stepping back).
+function show(i, k) {
+  k = Math.min(Math.max(k, 0), SC[i].steps.length);
+  run++; si = i; st = 0;
+  const sec = document.createElement("section"); sec.className = "scene" + (k > 0 || SC[i].still ? " noanim" : "");
+  sec.innerHTML = SC[i].html(); $("#view").replaceChildren(sec);
+  SC[i].init();
+  if (k > 0) {
+    const stage = $("#stage"); stage.classList.add("inst"); inst = true;
+    for (; st < k; st++) SC[i].steps[st]();
+    void stage.offsetWidth; stage.classList.remove("inst"); inst = false;
+  }
+  hud();
+}
+function next() {
+  if (si >= 0 && st < SC[si].steps.length) { SC[si].steps[st](); st++; hud(); }
+  else if (si < SC.length - 1) show(si + 1, 0);
+}
+function prev() {
+  if (st > 0) show(si, st - 1);
+  else if (si > 0) show(si - 1, SC[si - 1].steps.length);
+}
+addEventListener("keydown", e => {
+  if (e.repeat) return;
+  if (["ArrowRight", " ", "PageDown", "Enter"].includes(e.key)) { e.preventDefault(); next(); }
+  else if (["ArrowLeft", "PageUp", "Backspace"].includes(e.key)) { e.preventDefault(); prev(); }
+  else if (e.ctrlKey || e.metaKey || e.altKey) return;
+  else if (e.key === "Home" || e.key.toLowerCase() === "r") show(0, 0);
+  else if (e.key.toLowerCase() === "f") document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+  else if (e.key === "Escape" && document.fullscreenElement) document.exitFullscreen();
+});
+addEventListener("click", next);
+
+// #3 or #3.2 opens scene 3 (with 2 steps applied) for review.
+const [hs, hk] = location.hash.slice(1).split(".").map(Number);
+show(Math.min(Math.max((hs || 1) - 1, 0), SC.length - 1), hk || 0);
+</script>
+</body>
+</html>

@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Animation demo</title>
+<style>
+  :root{--ink:#0e0d0b;--ink2:#181612;--paper:#efe7d6;--dim:#8a8374;--hot:#ff5a1f;--save:#a8cf45;
+        --display:"Bahnschrift","Arial Narrow",sans-serif;--serif:Georgia,serif;--mono:Consolas,monospace}
+  *{box-sizing:border-box;margin:0}
+  body{background:#222;color:#ddd;font:14px var(--mono);padding:24px}
+  h1{font:600 16px var(--mono);margin-bottom:4px}p.sub{color:#999;margin-bottom:20px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(560px,1fr));gap:26px}
+  .cap{margin-bottom:8px;color:#bbb}.cap b{color:var(--hot)}
+  .st{aspect-ratio:16/9;container-type:inline-size;background:var(--ink);color:var(--paper);position:relative;overflow:hidden}
+  .st>*{position:absolute}
+  .tag{left:5cqw;top:4cqw;font:600 1.3cqw var(--mono);letter-spacing:.28em;color:var(--hot)}
+  .num{right:5cqw;top:4cqw;font:700 8cqw/1 var(--display);font-variant-numeric:tabular-nums;text-align:right}
+  .num small{display:block;font:500 1.3cqw var(--mono);color:var(--dim)}
+
+  /* 1 split */
+  .sen{left:5cqw;top:22cqw;font:400 6.4cqw/1.5 var(--serif);white-space:pre}
+  .sen .t{display:inline-block;position:relative;border-radius:.3cqw;transition:margin .5s,padding .5s,background .5s,box-shadow .5s}
+  .sen .t.cut{margin-right:.9cqw;padding:0 .7cqw;background:var(--ink2);box-shadow:inset 0 -.3cqw 0 var(--hot)}
+  .sen .t i{position:absolute;left:0;right:0;top:-2.2cqw;text-align:center;font:600 1.4cqw var(--mono);color:var(--hot);opacity:0;transition:opacity .3s;font-style:normal}
+  .sen .t.cut i{opacity:1}
+  .cnt{left:5cqw;top:38cqw;font:700 12cqw/1 var(--display)}
+
+  /* cells */
+  .cells{left:5cqw;top:19cqw;width:90cqw;display:flex;flex-wrap:wrap;gap:.3cqw}
+  .c{width:1.5cqw;height:1.5cqw;border-radius:.2cqw;transform:scale(0);opacity:0;transition:transform .35s cubic-bezier(.3,1.6,.5,1),opacity .3s,width .45s,margin .45s}
+  .c.on{transform:scale(1);opacity:1}
+  .c.gone{width:0;margin:0 -.15cqw;transform:scale(0);opacity:0}
+  .c.hit{box-shadow:0 0 0 .25cqw var(--hot)}
+  .c.cache::after{content:"";position:absolute;inset:0;border-radius:.2cqw;background:repeating-linear-gradient(-45deg,rgba(168,207,69,.9) 0 .35cqw,transparent .35cqw .75cqw);mix-blend-mode:multiply}
+  .c{position:relative}
+  .lg{left:5cqw;bottom:3cqw;font:1.3cqw var(--mono);color:var(--dim)}
+
+  /* receipt */
+  .rc{left:5cqw;top:12cqw;width:36cqw;padding:2.2cqw 2.6cqw 3.4cqw;background:var(--paper);color:#1a1814;font:500 1.9cqw/1.7 var(--mono);
+      -webkit-mask:conic-gradient(from -45deg at bottom,#0000,#000 1deg 89deg,#0000 90deg) 50%/1.6cqw 100%;mask:conic-gradient(from -45deg at bottom,#0000,#000 1deg 89deg,#0000 90deg) 50%/1.6cqw 100%}
+  .rc .l{display:flex;justify-content:space-between;opacity:0;transform:translateY(-.6cqw);transition:opacity .3s,transform .3s;white-space:pre}
+  .rc .l.on{opacity:1;transform:none}.rc .h{color:#d8400b;font-weight:700}
+  .rc .r{border-top:.25cqw dashed #1a1814;margin:.6cqw 0;opacity:0;transition:opacity .3s}.rc .r.on{opacity:1}
+
+  /* bars */
+  .cols{left:5cqw;top:14cqw;width:90cqw;height:27cqw;display:flex;gap:1.6cqw;align-items:flex-end;border-bottom:.25cqw solid var(--paper)}
+  .col{flex:1;height:0;display:flex;flex-direction:column-reverse;position:relative;transition:height .8s cubic-bezier(.3,.7,.2,1)}
+  .col div{width:100%}.col .a{background:#6a6354}.col .b{background:#b3a78b}.col .n{background:var(--hot)}
+  .col span{position:absolute;top:-2.6cqw;width:100%;text-align:center;font:600 1.5cqw var(--mono);opacity:0;transition:opacity .4s .5s}
+  .col.on span{opacity:1}
+
+  /* blocks */
+  .blks{left:5cqw;top:20cqw;display:flex;gap:.6cqw;flex-wrap:wrap;width:90cqw}
+  .b2{width:3.2cqw;height:3.2cqw;border-radius:.3cqw;transform:scale(0);opacity:0;transition:transform .4s cubic-bezier(.3,1.6,.5,1),opacity .4s}
+  .b2.on{transform:scale(1);opacity:1}.b2.ans{background:var(--hot)}
+  .b2.th{border:.3cqw dashed var(--hot)}
+  .cap2{left:5cqw;top:14cqw;font:500 1.5cqw var(--mono);color:var(--dim)}
+
+  /* levers */
+  .lv{left:52cqw;top:23cqw;width:43cqw;list-style:none;padding:0}
+  .lv li{font:500 2.1cqw/1 var(--display);padding:1.2cqw 0 1.2cqw 3.4cqw;border-top:1px solid #2c2923;color:#5a5548;position:relative;transition:color .4s}
+  .lv li::before{content:"";position:absolute;left:.4cqw;top:50%;width:1.5cqw;height:1.5cqw;margin-top:-.75cqw;border:.22cqw solid #4a463b;border-radius:50%;transition:all .4s}
+  .lv li.on{color:var(--paper)}.lv li.on::before{background:var(--save);border-color:var(--save)}
+  .lv li.now{color:var(--hot)}.lv li.now::before{background:var(--hot);border-color:var(--hot)}
+  .dl{left:5cqw;top:30cqw;font:700 3.4cqw var(--mono);color:var(--save)}
+  .cells.sm{top:14cqw;width:44cqw}
+
+  /* words */
+  .w{left:5cqw;top:6cqw;font:700 10.5cqw/1.04 var(--display);text-transform:uppercase}
+  .w div{opacity:0;transform:translateX(-4cqw);transition:all .7s cubic-bezier(.2,.7,.2,1)}
+  .w div.on{opacity:1;transform:none}.w div:nth-child(2){color:var(--hot)}
+</style></head><body>
+<h1>Animation demo</h1><p class="sub">All panels loop automatically. In the real deck each plays once per scene, paced by the presenter's advance key.</p>
+<div class="grid">
+  <div><div class="cap"><b>01</b> Token split: a sentence cuts into numbered chips</div><div class="st" id="p1"><div class="tag">01 TOKENS</div><div class="sen" id="sen"></div><div class="cnt" id="cnt">0</div></div></div>
+  <div><div class="cap"><b>02</b> Cell fill: layers pop in, counter climbs, your 9 tokens flash</div><div class="st" id="p2"><div class="tag">02 ONE REQUEST</div><div class="num"><span id="n2">0</span><small>INPUT TOKENS</small></div><div class="cells" id="g2"></div><div class="lg">1 square = 25 tokens</div></div></div>
+  <div><div class="cap"><b>03</b> Optimise: cells vanish, grid reflows, cache hatches, tokens count down</div><div class="st" id="p3"><div class="tag">04 OPTIMISE</div><div class="num"><span id="n3">0</span><small>INPUT TOKENS</small></div><div class="cells" id="g3"></div><div class="lg" id="l3"></div></div></div>
+  <div><div class="cap"><b>04</b> Receipt: lines print one by one, total counts up</div><div class="st" id="p4"><div class="tag">03 CREDITS</div><div class="rc" id="rc">
+    <div class="l"><span>REQUEST #4821</span><span></span></div><div class="r"></div>
+    <div class="l"><span>INPUT</span><span>4,609 tok</span></div><div class="l"><span>OUTPUT</span><span>800 tok</span></div>
+    <div class="l"><span>OUTPUT RATE</span><span class="h">4×</span></div><div class="l"><span>MODEL</span><span>×1.0</span></div><div class="r"></div>
+    <div class="l h"><span>TOTAL</span><span id="tot">0.00</span></div></div></div></div>
+  <div><div class="cap"><b>05</b> Growth: every turn re-sends the past</div><div class="st" id="p5"><div class="tag">03 CREDITS</div><div class="cols" id="cols"></div></div></div>
+  <div><div class="cap"><b>06</b> Hidden output: answer blocks, then dashed reasoning blocks (each block = 4× rate)</div><div class="st" id="p6"><div class="tag">02 ONE REQUEST</div><div class="cap2">ANSWER SHOWN + REASONING YOU NEVER SEE</div><div class="blks" id="blks"></div></div></div>
+  <div><div class="cap"><b>07</b> Levers: checklist lights up, cells drop, credits fall</div><div class="st" id="p7"><div class="tag">04 OPTIMISE</div><div class="cells sm" id="g7"></div><div class="num" style="right:auto;left:5cqw;top:30cqw"><span id="n7">0.00</span><small>CREDITS PER REQUEST</small></div>
+    <ul class="lv" id="lv"><li>Fresh chat per task</li><li>Retrieve only what's relevant</li><li>Clear spec</li><li>Cache the stable prefix</li><li>Right-size model + effort</li></ul></div></div>
+  <div><div class="cap"><b>08</b> Takeaway: words slide in one at a time</div><div class="st" id="p8"><div class="tag">05 TAKEAWAY</div><div class="w" id="w"><div>Send less.</div><div>Spend where</div><div>it matters.</div></div></div></div>
+</div>
+<script>
+const $=(s,r=document)=>r.querySelector(s), sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const loop=async(fn,gap=1500)=>{while(true){await fn();await sleep(gap)}};
+const fmt=n=>Math.round(n).toLocaleString("en-US");
+function count(el,to,ms,dec=0){const from=parseFloat(el.dataset.v||0),t0=performance.now();
+  return new Promise(res=>{(function f(t){const p=Math.min(1,(t-t0)/ms),e=1-Math.pow(1-p,3),v=from+(to-from)*e;
+    el.textContent=dec?v.toFixed(dec):fmt(v);el.dataset.v=v;p<1?requestAnimationFrame(f):res()})(t0)})}
+const COL=["#d8ccb0","#b3a78b","#8c826d","#efe7d6"];
+// groups: sys, tools, history, files, you
+function cells(root,counts){root.innerHTML="";const out=[];
+  counts.forEach((n,g)=>{for(let i=0;i<n;i++){const c=document.createElement("i");c.className="c";c.dataset.g=g;
+    c.style.background=g===4?"var(--hot)":COL[g];root.append(c);out.push(c)}});return out}
+
+// 01 token split
+loop(async()=>{const parts=["Sum","mar","ise"," this"," incident"," for"," the"," board","."],s=$("#sen");
+  s.innerHTML=parts.map(p=>`<span class="t">${p}<i></i></span>`).join("");$("#cnt").textContent=0;await sleep(1200);
+  for(let i=0;i<parts.length;i++){const t=s.children[i];t.firstChild.nodeValue=parts[i].trim();t.querySelector("i").textContent=i+1;
+    t.classList.add("cut");$("#cnt").textContent=i+1;await sleep(380)}},3000);
+
+// 02 cell fill
+loop(async()=>{const cs=cells($("#g2"),[28,36,48,72,1]);$("#n2").dataset.v=0;$("#n2").textContent=0;
+  let tok=0;await sleep(500);
+  for(const c of cs){c.classList.add("on");tok+=c.dataset.g==="4"?9:25;$("#n2").textContent=fmt(Math.min(tok,4609));await sleep(c.dataset.g==="4"?0:16)}
+  cs[cs.length-1].classList.add("hit");$("#n2").textContent="4,609"},3500);
+
+// 03 optimise
+loop(async()=>{const cs=cells($("#g3"),[28,36,48,72,1]);cs.forEach(c=>c.classList.add("on"));
+  const n=$("#n3"),l=$("#l3");n.dataset.v=4609;n.textContent="4,609";l.textContent="";await sleep(1800);
+  const drop=(g,keep)=>cs.filter(c=>+c.dataset.g===g).slice(keep).forEach((c,i)=>setTimeout(()=>c.classList.add("gone"),i*18));
+  l.textContent="fresh chat per task";drop(2,16);await count(n,3800,900);await sleep(900);
+  l.textContent="retrieve only what's relevant";drop(3,32);await count(n,2800,900);await sleep(900);
+  l.textContent="cache the stable prefix";cs.filter(c=>+c.dataset.g<2).forEach(c=>c.classList.add("cache"));await sleep(1800)},3000);
+
+// 04 receipt
+loop(async()=>{const rc=$("#rc");[...rc.children].forEach(e=>e.classList.remove("on"));$("#tot").textContent="0.00";$("#tot").dataset.v=0;await sleep(600);
+  for(const e of rc.children){e.classList.add("on");await sleep(e.classList.contains("r")?200:550)}await count($("#tot"),7.81,1200,2)},3000);
+
+// 05 growth bars
+loop(async()=>{const box=$("#cols"),T=8,base=1000,add=600,max=base+add*T;
+  box.innerHTML=Array.from({length:T},(_,i)=>{const n=i+1,t=base+add*n;
+    return `<div class="col" data-h="${t/max*100}"><div class="a" style="height:${base/t*100}%"></div><div class="b" style="height:${add*(n-1)/t*100}%"></div><div class="n" style="height:${add/t*100}%"></div><span>${fmt(t)}</span></div>`}).join("");
+  await sleep(500);for(const c of box.children){c.style.height=`calc(${c.dataset.h}% )`;c.classList.add("on");await sleep(650)}},3500);
+
+// 06 output blocks
+loop(async()=>{const b=$("#blks");b.innerHTML="";const bl=[];
+  for(let i=0;i<12;i++){const d=document.createElement("i");d.className="b2 ans";b.append(d);bl.push(d)}
+  for(let i=0;i<20;i++){const d=document.createElement("i");d.className="b2 th";b.append(d);bl.push(d)}
+  await sleep(500);for(const d of bl){d.classList.add("on");await sleep(d.classList.contains("th")?55:90)}},3500);
+
+// 07 levers
+loop(async()=>{const cs=cells($("#g7"),[20,24,30,44,1]);cs.forEach(c=>c.classList.add("on"));const li=[...$("#lv").children];
+  li.forEach(e=>e.className="");const n=$("#n7");n.dataset.v=7.81;n.textContent="7.81";await sleep(1500);
+  const plan=[[2,10,5.9],[3,16,4.3],[3,10,3.4],[null,0,2.6],[null,0,1.8]];
+  for(let i=0;i<li.length;i++){li.forEach(e=>e.classList.remove("now"));li[i].classList.add("on","now");
+    const [g,keep,v]=plan[i];if(g!==null)cs.filter(c=>+c.dataset.g===g).slice(keep).forEach((c,k)=>setTimeout(()=>c.classList.add("gone"),k*20));
+    if(i===3)cs.filter(c=>+c.dataset.g<2).forEach(c=>c.classList.add("cache"));
+    await count(n,v,900,2);await sleep(900)}},3000);
+
+// 08 words
+loop(async()=>{const w=[...$("#w").children];w.forEach(e=>e.classList.remove("on"));
+  for(const e of w){await sleep(900);e.classList.add("on")}await sleep(1200)},2500);
+</script></body></html>

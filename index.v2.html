@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tokens, not coins</title>
+<style>
+  :root {
+    --ink: #0e0d0b;
+    --ink-2: #181612;
+    --paper: #efe7d6;
+    --dim: #8a8374;
+    --hot: #ff5a1f;
+    --save: #a8cf45;
+    --display: "Bahnschrift", "Arial Narrow", "Segoe UI", sans-serif;
+    --serif: Georgia, "Times New Roman", serif;
+    --mono: Consolas, "Courier New", monospace;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { width: 100%; height: 100%; background: var(--ink); overflow: hidden; cursor: none; }
+  #stage {
+    position: absolute; left: 0; top: 0;
+    width: 1920px; height: 1080px;
+    transform-origin: 0 0;
+    background: var(--ink); color: var(--paper);
+    font-family: var(--display);
+    overflow: hidden;
+  }
+  .scene { position: absolute; inset: 0; padding: 92px 110px; opacity: 0; animation: in .7s ease forwards; }
+  @keyframes in { to { opacity: 1; } }
+  .tag { font: 600 22px var(--mono); letter-spacing: .28em; color: var(--hot); text-transform: uppercase; }
+  .note { position: absolute; left: 110px; bottom: 56px; font: 400 20px var(--mono); color: var(--dim); letter-spacing: .08em; }
+  #bar { position: absolute; left: 0; bottom: 0; height: 4px; background: var(--hot); transition: width .6s ease; }
+
+  /* ---- 1 · tokens ---- */
+  .sentence { position: absolute; left: 110px; top: 330px; font: 400 104px/1.5 var(--serif); white-space: pre; }
+  .sentence .t { display: inline-block; position: relative; transition: margin .5s, padding .5s, background .5s; border-radius: 4px; }
+  .sentence .t.cut { margin-right: 14px; padding: 0 12px; background: var(--ink-2); box-shadow: inset 0 -4px 0 var(--hot); }
+  .sentence .t i { position: absolute; left: 0; right: 0; top: -34px; text-align: center; font: 600 22px var(--mono); color: var(--hot); opacity: 0; transition: opacity .3s; font-style: normal; }
+  .sentence .t.cut i { opacity: 1; }
+  .count { position: absolute; left: 110px; top: 660px; font: 700 300px/1 var(--display); letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+  .count small { font: 500 44px var(--mono); color: var(--dim); letter-spacing: 0; margin-left: 24px; }
+  .coin { position: absolute; right: 140px; top: 620px; width: 360px; text-align: center; opacity: 0; transition: opacity .8s; }
+  .coin b { display: block; font: 400 300px/1 var(--serif); color: var(--dim); position: relative; width: max-content; margin: 0 auto; }
+  .coin b::after { content: ""; position: absolute; left: -20px; top: 50%; height: 14px; width: 0; background: var(--hot); transform: rotate(-12deg); transform-origin: left; transition: width .7s ease .5s; }
+  .coin.on { opacity: 1; } .coin.on b::after { width: 112%; }
+  .coin span { display: block; margin-top: 22px; font: 500 34px var(--mono); color: var(--paper); }
+
+  /* ---- shared bar ---- */
+  h2 { font: 400 76px/1.05 var(--serif); position: absolute; left: 110px; top: 150px; }
+  h2 em { color: var(--hot); font-style: italic; }
+  .track { display: flex; gap: 4px; align-items: stretch; height: 150px; }
+  .seg { flex: 0 0 auto; width: 0; position: relative; transition: width 1.1s cubic-bezier(.3,.7,.2,1); overflow: hidden; border-radius: 3px;
+    background-image: repeating-linear-gradient(90deg, transparent 0 7px, rgba(14,13,11,.45) 7px 8px); }
+  .seg.cached::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(-45deg, rgba(168,207,69,.85) 0 6px, transparent 6px 14px); mix-blend-mode: multiply; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px 40px; margin-top: 34px; font: 500 24px var(--mono); }
+  .legend div { opacity: 0; transition: opacity .6s; display: flex; align-items: center; gap: 12px; }
+  .legend div.on { opacity: 1; }
+  .legend i { width: 22px; height: 22px; border-radius: 3px; display: inline-block; }
+  .legend b { color: var(--dim); font-weight: 400; }
+
+  /* ---- 2 · anatomy ---- */
+  .big { position: absolute; right: 110px; top: 118px; text-align: right; font: 700 168px/1 var(--display); letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+  .big small { display: block; font: 500 26px var(--mono); color: var(--dim); letter-spacing: .12em; text-transform: uppercase; margin-top: 4px; }
+  .anat { position: absolute; left: 110px; top: 440px; width: 1700px; }
+  .you { position: absolute; top: -76px; opacity: 0; transition: opacity .6s; font: 500 24px var(--mono); color: var(--hot); white-space: nowrap; }
+  .you::after { content: ""; position: absolute; left: 0; top: 36px; width: 2px; height: 40px; background: var(--hot); }
+  .outrow { margin-top: 70px; opacity: 0; transition: opacity .8s; }
+  .outrow.on { opacity: 1; }
+  .outrow .lbl { font: 500 24px var(--mono); color: var(--dim); margin-bottom: 14px; letter-spacing: .06em; }
+  .outrow .track { height: 70px; }
+  .out-ans { background-color: var(--hot); } 
+  .out-think { border: 3px dashed var(--hot); background: none !important; }
+
+  /* ---- 3 · credits ---- */
+  .formula { position: absolute; left: 110px; top: 150px; font: 400 76px/1.05 var(--serif); white-space: nowrap; }
+  .formula span { opacity: 0; transition: opacity .6s; display: inline-block; }
+  .formula span.on { opacity: 1; }
+  .formula .op { color: var(--hot); margin: 0 .22em; }
+  .receipt { position: absolute; left: 110px; top: 330px; width: 600px; padding: 40px 44px 66px; background: var(--paper); color: #1a1814; font: 500 29px/1.65 var(--mono);
+    -webkit-mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 26px 100%;
+            mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 26px 100%; }
+  .receipt .ln { display: flex; justify-content: space-between; opacity: 0; transform: translateY(-8px); transition: opacity .35s, transform .35s; white-space: pre; }
+  .receipt .ln.on { opacity: 1; transform: none; }
+  .receipt .rule { border-top: 3px dashed #1a1814; margin: 10px 0; opacity: 0; transition: opacity .35s; }
+  .receipt .rule.on { opacity: 1; }
+  .receipt .tot { font: 700 44px/1.5 var(--mono); }
+  .receipt .hot { color: #d8400b; }
+  .chart { position: absolute; left: 850px; top: 330px; width: 960px; height: 560px; }
+  .chart h3 { font: 500 26px var(--mono); color: var(--dim); letter-spacing: .06em; margin-bottom: 18px; font-weight: 500; opacity: 0; transition: opacity .6s; }
+  .chart h3.on { opacity: 1; }
+  .cols { display: flex; gap: 22px; align-items: flex-end; height: 430px; border-bottom: 3px solid var(--paper); }
+  .col { flex: 1; display: flex; flex-direction: column-reverse; height: 0; transition: height .9s cubic-bezier(.3,.7,.2,1); position: relative; }
+  .col div { width: 100%; }
+  .col .b0 { background: #6a6354; } .col .b1 { background: #b3a78b; } .col .b2 { background: var(--hot); }
+  .col .x { position: absolute; width: 100%; top: -46px; text-align: center; font: 600 26px var(--mono); opacity: 0; transition: opacity .5s .6s; }
+  .col.on .x { opacity: 1; }
+  .labels { display: flex; gap: 22px; margin-top: 12px; font: 500 22px var(--mono); color: var(--dim); }
+  .labels span { flex: 1; text-align: center; }
+  .key { display: flex; gap: 34px; margin-top: 26px; font: 500 22px var(--mono); opacity: 0; transition: opacity .6s; }
+  .key.on { opacity: 1; }
+  .key i { display: inline-block; width: 20px; height: 20px; margin-right: 10px; vertical-align: -3px; }
+
+  /* ---- 4 · optimise ---- */
+  .opt-left { position: absolute; left: 110px; top: 330px; width: 1060px; }
+  .opt-left .track { height: 130px; }
+  .opt-left .legend { margin-top: 28px; gap: 12px 30px; font-size: 21px; }
+  .answer { margin-top: 56px; padding: 30px 38px; background: var(--ink-2); border-left: 8px solid var(--save); display: flex; justify-content: space-between; align-items: center; }
+  .answer q { font: italic 400 46px var(--serif); quotes: none; }
+  .answer span { font: 600 24px var(--mono); color: var(--save); letter-spacing: .08em; text-align: right; }
+  .opt-right { position: absolute; left: 1290px; top: 130px; width: 520px; }
+  .score { font: 700 190px/1 var(--display); letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+  .score-l { font: 500 24px var(--mono); color: var(--dim); letter-spacing: .1em; margin-bottom: 8px; }
+  .delta { font: 700 44px var(--mono); color: var(--save); height: 60px; margin-top: 6px; }
+  .levers { margin-top: 34px; list-style: none; padding: 0; }
+  .levers li { font: 500 30px/1 var(--display); padding: 17px 0 17px 54px; border-top: 1px solid #2c2923; color: #5a5548; position: relative; transition: color .5s; }
+  .levers li::before { content: ""; position: absolute; left: 6px; top: 50%; width: 22px; height: 22px; margin-top: -11px; border: 3px solid #4a463b; border-radius: 50%; transition: all .5s; }
+  .levers li.on { color: var(--paper); }
+  .levers li.on::before { background: var(--save); border-color: var(--save); }
+  .levers li.now { color: var(--hot); }
+  .levers li.now::before { background: var(--hot); border-color: var(--hot); }
+
+  /* ---- 5 · takeaways ---- */
+  .three { position: absolute; left: 110px; top: 200px; }
+  .three div { font: 700 200px/1.04 var(--display); letter-spacing: -.035em; text-transform: uppercase; opacity: 0; transform: translateX(-40px); transition: all .8s cubic-bezier(.2,.7,.2,1); }
+  .three div.on { opacity: 1; transform: none; }
+  .three div:nth-child(2) { color: var(--hot); }
+  .metric { position: absolute; left: 110px; bottom: 100px; right: 110px; border-top: 3px solid var(--paper); padding-top: 28px; display: flex; justify-content: space-between; align-items: baseline; opacity: 0; transition: opacity .8s; }
+  .metric.on { opacity: 1; }
+  .metric span { font: 500 26px var(--mono); color: var(--dim); letter-spacing: .12em; text-transform: uppercase; }
+  .metric b { font: 400 64px var(--serif); font-style: italic; }
+</style>
+</head>
+<body>
+<div id="stage"><div id="view"></div><div id="bar"></div></div>
+
+<script>
+const $ = (s, r = document) => r.querySelector(s);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const fmt = n => Math.round(n).toLocaleString("en-US");
+let run = 0;
+
+// Scale the 1920x1080 stage to any screen.
+function fit() {
+  const s = Math.min(innerWidth / 1920, innerHeight / 1080);
+  $("#stage").style.transform = `translate(${(innerWidth - 1920 * s) / 2}px, ${(innerHeight - 1080 * s) / 2}px) scale(${s})`;
+}
+addEventListener("resize", fit); fit();
+
+function countTo(el, to, ms, id, dec = 0, from = null) {
+  const start = from ?? parseFloat(el.dataset.v || "0");
+  const t0 = performance.now();
+  return new Promise(res => {
+    (function f(t) {
+      if (id !== run) return res();
+      const p = Math.min(1, (t - t0) / ms), e = 1 - Math.pow(1 - p, 3);
+      const v = start + (to - start) * e;
+      el.textContent = dec ? v.toFixed(dec) : fmt(v);
+      el.dataset.v = v;
+      p < 1 ? requestAnimationFrame(f) : res();
+    })(t0);
+  });
+}
+
+/* ---------- model of one request (illustrative) ---------- */
+const LAYERS = [
+  { k: "sys",   n: "System prompt",        c: "#d8ccb0" },
+  { k: "tools", n: "Tool definitions",     c: "#b3a78b" },
+  { k: "hist",  n: "Conversation history", c: "#8c826d" },
+  { k: "files", n: "Retrieved files",      c: "#efe7d6" },
+  { k: "user",  n: "What you typed",       c: "#ff5a1f" }
+];
+const START = { sys: 700, tools: 900, hist: 1200, files: 1800, user: 9, out: 300, mult: 1, cache: false };
+const inTotal = s => s.sys + s.tools + s.hist + s.files + s.user;
+const cost = s => {
+  const cached = s.cache ? s.sys + s.tools : 0;
+  return ((inTotal(s) - cached) + 0.1 * cached + 4 * s.out) / 1000 * s.mult;
+};
+
+function trackHTML() { return `<div class="track">${LAYERS.map(l => `<div class="seg" data-k="${l.k}" style="background-color:${l.c}"></div>`).join("")}</div>`; }
+function legendHTML() { return `<div class="legend">${LAYERS.map(l => `<div data-k="${l.k}"><i style="background:${l.c}"></i>${l.n} <b data-n>0</b></div>`).join("")}</div>`; }
+function setSegs(root, s, px, cacheOn) {
+  LAYERS.forEach(l => {
+    const seg = $(`.seg[data-k="${l.k}"]`, root);
+    seg.style.width = Math.max(l.k === "user" ? 5 : 0, s[l.k] * px) + "px";
+    seg.classList.toggle("cached", !!cacheOn && (l.k === "sys" || l.k === "tools"));
+    const n = $(`.legend [data-k="${l.k}"] [data-n]`, root);
+    if (n) n.textContent = fmt(s[l.k]);
+  });
+}
+
+/* ---------- scenes ---------- */
+const SCENES = [
+  {
+    html: () => `<div class="tag">01 &nbsp;Tokens</div>
+      <div class="sentence" id="sen"></div>
+      <div class="count"><span id="cnt">0</span><small>tokens</small></div>
+      <div class="coin" id="coin"><b>₿</b><span>not that kind.</span></div>`,
+    async play(w, id) {
+      const parts = ["Sum", "mar", "ise", " this", " incident", " for", " the", " board", "."];
+      const sen = $("#sen");
+      sen.innerHTML = parts.map(p => `<span class="t">${p}<i></i></span>`).join("");
+      await w(2500);
+      const spans = [...sen.children];
+      for (let i = 0; i < spans.length; i++) {
+        spans[i].textContent = parts[i].trim();
+        spans[i].insertAdjacentHTML("beforeend", `<i>${i + 1}</i>`);
+        spans[i].classList.add("cut");
+        $("#cnt").textContent = i + 1;
+        await w(520);
+      }
+      await w(2500);
+      $("#coin").classList.add("on");
+    }
+  },
+  {
+    html: () => `<div class="tag">02 &nbsp;One request</div>
+      <h2>What you typed is the<br><em>tip</em> of the request.</h2>
+      <div class="big"><span id="tot">0</span><small>input tokens</small></div>
+      <div class="anat">
+        <div class="you" id="you">you typed this</div>
+        ${trackHTML()}${legendHTML()}
+        <div class="outrow" id="outrow">
+          <div class="lbl">THE ANSWER &nbsp;·&nbsp; BILLED AS OUTPUT</div>
+          <div class="track"><div class="seg out-ans" id="oa"></div><div class="seg out-think" id="ot"></div></div>
+          <div class="legend" style="margin-top:20px"><div class="on"><i style="background:var(--hot)"></i>Answer shown <b>300</b></div><div class="on"><i style="border:3px dashed var(--hot)"></i>Reasoning you never see <b>~500</b></div></div>
+        </div>
+      </div>
+      <div class="note">illustrative numbers</div>`,
+    async play(w, id) {
+      const root = $(".anat"), px = 1700 / 4700, cur = { sys: 0, tools: 0, hist: 0, files: 0, user: 0 };
+      await w(1200);
+      let total = 0;
+      for (const l of LAYERS) {
+        cur[l.k] = START[l.k];
+        $(`.legend [data-k="${l.k}"]`, root).classList.add("on");
+        setSegs(root, cur, px, false);
+        if (l.k === "user") {
+          await w(1300);
+          $("#you").style.left = ($('.seg[data-k="user"]', root).offsetLeft - 2) + "px";
+          $("#you").style.opacity = 1;
+        }
+        const to = total + START[l.k];
+        await Promise.all([countTo($("#tot"), to, 1000, id), w(l.k === "user" ? 1600 : 4200)]);
+        total = to;
+      }
+      await w(3500);
+      $("#outrow").classList.add("on");
+      $("#oa").style.width = 300 * px + "px";
+      await w(1200);
+      $("#ot").style.width = 500 * px + "px";
+    }
+  },
+  {
+    html: () => `<div class="tag">03 &nbsp;Credits</div>
+      <div class="formula"><span id="f1">tokens</span><span class="op" id="o1">×</span><span id="f2">rate</span><span class="op" id="o2">×</span><span id="f3">model</span><span class="op" id="o3">=</span><span id="f4" style="color:var(--hot)">credits</span></div>
+      <div class="receipt" id="rc">
+        <div class="ln"><span>REQUEST #4821</span><span></span></div>
+        <div class="rule"></div>
+        <div class="ln"><span>INPUT</span><span>4,609 tok</span></div>
+        <div class="ln"><span>&nbsp;&nbsp;rate</span><span>1×</span></div>
+        <div class="ln"><span>OUTPUT</span><span>300 tok</span></div>
+        <div class="ln"><span>&nbsp;&nbsp;rate</span><span class="hot">4×</span></div>
+        <div class="ln"><span>MODEL TIER</span><span>×1.0</span></div>
+        <div class="rule"></div>
+        <div class="ln tot"><span>TOTAL</span><span class="hot" id="rt">0.00</span></div>
+      </div>
+      <div class="chart">
+        <h3 id="ch">EVERY TURN RE-SENDS THE PAST</h3>
+        <div class="cols" id="cols"></div>
+        <div class="labels" id="lbls"></div>
+        <div class="key" id="key"><span><i style="background:#6a6354"></i>instructions</span><span><i style="background:#b3a78b"></i>history</span><span><i style="background:var(--hot)"></i>new message</span></div>
+      </div>
+      <div class="note">illustrative units, not a price list</div>`,
+    async play(w, id) {
+      const on = el => el.classList.add("on");
+      for (const k of ["f1", "o1", "f2", "o2", "f3", "o3", "f4"]) { on($("#" + k)); await w(600); }
+      await w(1500);
+      const lines = [...$("#rc").children];
+      for (const ln of lines) { on(ln); await w(ln.classList.contains("rule") ? 250 : 700); }
+      countTo($("#rt"), cost(START), 1400, id, 2);
+      await w(3500);
+      on($("#ch")); on($("#key"));
+      const turns = 8, base = 1000, add = 600, maxT = base + add * turns, H = 430;
+      $("#cols").innerHTML = Array.from({ length: turns }, (_, i) => {
+        const n = i + 1, t = base + add * n, x = t / (base + add);
+        return `<div class="col" data-h="${t / maxT * H}"><div class="b0" style="height:${base / t * 100}%"></div><div class="b1" style="height:${add * (n - 1) / t * 100}%"></div><div class="b2" style="height:${add / t * 100}%"></div><span class="x">${x.toFixed(1)}×</span></div>`;
+      }).join("");
+      $("#lbls").innerHTML = Array.from({ length: turns }, (_, i) => `<span>T${i + 1}</span>`).join("");
+      await w(300);
+      for (const c of $("#cols").children) { c.style.height = c.dataset.h + "px"; on(c); await w(1100); }
+    }
+  },
+  {
+    html: () => `<div class="tag">04 &nbsp;Optimise</div>
+      <h2>Same answer.<br><em>Lighter</em> request.</h2>
+      <div class="opt-left">
+        ${trackHTML()}${legendHTML()}
+        <div class="answer"><q>Service restored. No data lost.</q><span>SAME ANSWER<br>BEFORE &amp; AFTER</span></div>
+      </div>
+      <div class="opt-right">
+        <div class="score-l">CREDITS PER REQUEST</div>
+        <div class="score" id="sc">0.00</div>
+        <div class="delta" id="dl"></div>
+        <ul class="levers" id="lv">
+          <li>Fresh chat per task</li><li>Retrieve only what's relevant</li><li>Trim prompt &amp; tools</li>
+          <li>Cache the stable prefix</li><li>Right-size the model</li><li>Cap the answer length</li>
+        </ul>
+      </div>
+      <div class="note">illustrative numbers</div>`,
+    async play(w, id) {
+      const root = $(".opt-left"), px = 1060 / 5000, s = { ...START };
+      const base = cost(s);
+      LAYERS.forEach(l => $(`.legend [data-k="${l.k}"]`, root).classList.add("on"));
+      setSegs(root, s, px, false);
+      await Promise.all([countTo($("#sc"), base, 1200, id, 2, 0), w(7000)]);
+      const steps = [
+        s => { s.hist = 400; },
+        s => { s.files = 800; },
+        s => { s.tools = 600; s.sys = 500; },
+        s => { s.cache = true; },
+        s => { s.mult = 0.8; },
+        s => { s.out = 240; }
+      ];
+      const items = [...$("#lv").children];
+      for (let i = 0; i < steps.length; i++) {
+        items.forEach(li => li.classList.remove("now"));
+        items[i].classList.add("on", "now");
+        steps[i](s);
+        setSegs(root, s, px, s.cache);
+        const c = cost(s);
+        await Promise.all([countTo($("#sc"), c, 1400, id, 2), w(1500)]);
+        $("#dl").textContent = "−" + Math.round((1 - c / base) * 100) + "%";
+        await w(i === steps.length - 1 ? 9000 : 9000);
+      }
+      items.forEach(li => li.classList.remove("now"));
+    }
+  },
+  {
+    html: () => `<div class="tag">05 &nbsp;Takeaway</div>
+      <div class="three"><div>Send less.</div><div>Size right.</div><div>Reuse more.</div></div>
+      <div class="metric" id="mt"><span>Watch one number</span><b>tokens per completed task</b></div>`,
+    async play(w, id) {
+      for (const d of [...$(".three").children]) { await w(2500); d.classList.add("on"); }
+      await w(3500);
+      $("#mt").classList.add("on");
+    }
+  }
+];
+
+/* ---------- player ---------- */
+let idx = -1;
+function go(i) {
+  i = Math.max(0, Math.min(SCENES.length - 1, i));
+  if (i === idx) return;
+  idx = i; run++;
+  const id = run, w = ms => sleep(ms).then(() => { if (id !== run) throw 0; });
+  const view = $("#view");
+  view.innerHTML = `<section class="scene">${SCENES[i].html()}</section>`;
+  $("#bar").style.width = ((i + 1) / SCENES.length * 100) + "%";
+  SCENES[i].play(w, id).catch(() => {});
+}
+addEventListener("keydown", e => {
+  if (["ArrowRight", " ", "PageDown", "Enter"].includes(e.key)) { e.preventDefault(); go(idx + 1); }
+  else if (["ArrowLeft", "PageUp", "Backspace"].includes(e.key)) { e.preventDefault(); go(idx - 1); }
+  else if (e.key === "Home") go(0);
+  else if (e.key.toLowerCase() === "f") document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+});
+addEventListener("click", () => go(idx + 1));
+go(0);
+</script>
+</body>
+</html>
