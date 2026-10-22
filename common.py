@@ -1,22 +1,30 @@
 """Shared helpers for the Tokenomics demo kit.
 
 Configure with environment variables (or a .env file you `source`):
-  AZURE_OPENAI_ENDPOINT   e.g. https://<your-resource>.openai.azure.com
-  AZURE_OPENAI_API_KEY    key of the Foundry / Azure OpenAI resource
-  MODEL_LARGE             deployment name, e.g. gpt-5.4
-  MODEL_SMALL             deployment name, e.g. gpt-5.4-mini
-  MODEL_ROUTER            deployment name of model-router
-  EMBEDDING_MODEL         deployment name, e.g. text-embedding-3-small
+    AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT", )
+    AZURE_OPENAI_API_KEY  = os.getenv("AZURE_OPENAI_API_KEY", "<key>")   # or use Entra ID (see below)
+    MODEL_LARGE     = os.getenv("MODEL_LARGE", "gpt-5.4")
+    MODEL_SMALL     = os.getenv("MODEL_SMALL", "gpt-5.4-mini")
+    MODEL_ROUTER    = os.getenv("MODEL_ROUTER", "model-router")
+    EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-3-large")
+    REASONING_EFFORT = os.getenv("REASONING_EFFORT", "low")   # keeps hidden reasoning tokens small on GPT-5 models; "" to disable
+    FOUNDRY_URL     = "https://ai.azure.com"
 Prices live in prices.json (fill in current list prices before the session).
 """
 import json, os, time
 from pathlib import Path
+from azure.identity import DefaultAzureCredential, get_bearer_token_provider
+from dotenv import load_dotenv
 
 HERE = Path(__file__).parent
+load_dotenv(HERE / ".env")
+
+AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT", "https://ews-foundry-play.openai.azure.com")
 MODEL_LARGE = os.getenv("MODEL_LARGE", "gpt-5.4")
 MODEL_SMALL = os.getenv("MODEL_SMALL", "gpt-5.4-mini")
 MODEL_ROUTER = os.getenv("MODEL_ROUTER", "model-router")
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-3-large")
+REASONING_EFFORT = os.getenv("REASONING_EFFORT", "low")   # keeps hidden reasoning tokens small on GPT-5 models; "" to disable
 
 # ---------- pretty printing ----------
 B, DIM, G, Y, R, C, X = "\033[1m", "\033[2m", "\033[92m", "\033[93m", "\033[91m", "\033[96m", "\033[0m"
@@ -39,7 +47,7 @@ def client():
         from openai import OpenAI
         endpoint = os.environ["AZURE_OPENAI_ENDPOINT"].rstrip("/")
         _client = OpenAI(base_url=f"{endpoint}/openai/v1/",
-                         api_key=os.environ["AZURE_OPENAI_API_KEY"])
+                         api_key=get_bearer_token_provider(DefaultAzureCredential(), "https://cognitiveservices.azure.com/.default"))
     return _client
 
 def chat(messages, model=None, **kwargs):

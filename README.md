@@ -1,7 +1,7 @@
 # Tokenomics demo kit
 **Recommended: open Tokenomics-Demo.ipynb** in VS Code or Jupyter. It has the full storyline, live code, charts for every demo, the numbers from the video, talk-track callouts and Foundry UI cards (save your screenshots in `img/`).
 
-The standalone scripts below are a backup for running from the terminal. DEMO-SCRIPT.md has the same storyline as a written script.
+The standalone scripts below are a backup for running from the terminal. [docs/DEMO-SCRIPT.md](docs/DEMO-SCRIPT.md) has the same storyline as a written script.
 
 | File | Demo |
 |---|---|
@@ -22,3 +22,8 @@ The standalone scripts below are a backup for running from the terminal. DEMO-SC
 | demo11_agent_optimizer.md | azd ai agent optimize walkthrough |
 | demo12_retrieval.py | Whole document vs relevant chunks |
 | cost_calculator.py | Closing slide: savings by option at scale |
+
+## Other project files
+- `docs/` contains the written talk track and idea notes with their images.
+- `web/` contains the HTML presentation, theme and animation previews, and their assets.
+- `web/archive/` contains earlier HTML presentation versions.

@@ -11,7 +11,16 @@ from anthropic import Anthropic
 from common import banner, B, G, Y, X, pause
 
 banner("DEMO 7b - Explicit cache_control (ephemeral)")
-c = Anthropic(base_url=os.environ["ANTHROPIC_FOUNDRY_BASE_URL"], api_key=os.environ["ANTHROPIC_FOUNDRY_API_KEY"])
+
+api_key = os.getenv("ANTHROPIC_FOUNDRY_API_KEY", "").strip()
+if not api_key:
+    print(f"{Y}ANTHROPIC_FOUNDRY_API_KEY is niet ingesteld; demo overgeslagen.{X}")
+    raise SystemExit(0)
+
+c = Anthropic(
+    base_url=os.environ["ANTHROPIC_FOUNDRY_BASE_URL"],
+    api_key=api_key,
+)
 policy = "\n".join(f"Policy {i}: category {i} returns within {14 + i % 3 * 7} days with receipt." for i in range(1, 400))
 
 system = [

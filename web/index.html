@@ -43,15 +43,22 @@
   .cover-meta b { color: var(--paper); font-weight: 600; }
 
   /* ---- 1 tokens ---- */
-  .sentence { position: absolute; left: 110px; top: 350px; font: 400 70px/1.5 var(--serif); white-space: pre; }
+  .sentence { position: absolute; left: 110px; top: 350px; font: 400 66px/1.5 var(--serif); white-space: pre; }
   .pbox { position: absolute; left: 80px; top: 290px; width: 1760px; height: 190px; border: 2px solid #3a362d; border-radius: 6px; background: #121110; }
   .plabel { position: absolute; left: 80px; top: 238px; font: 600 26px var(--mono); letter-spacing: .3em; color: var(--hot); }
   .sentence .t { display: inline-block; position: relative; border-radius: 4px; transition: margin .5s, padding .5s, background .5s, box-shadow .5s; }
   .sentence .t.cut { margin-right: 10px; padding: 0 9px; background: var(--ink-2); box-shadow: inset 0 -4px 0 var(--hot); }
   .sentence .t i { position: absolute; left: 0; right: 0; top: -34px; text-align: center; font: 600 22px var(--mono); color: var(--hot); opacity: 0; transition: opacity .3s; font-style: normal; }
   .sentence .t.cut i { opacity: 1; }
+  .sentence .t.space-token { color: var(--hot); font-family: var(--mono); }
   .count { position: absolute; left: 0; width: 1920px; text-align: center; top: 640px; font: 700 300px/1 var(--display); letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
   .count small { font: 500 44px var(--mono); color: var(--dim); letter-spacing: 0; margin-left: 24px; }
+  .space-demo { position: absolute; left: 110px; top: 520px; width: 1700px; display: flex; align-items: center; gap: 22px; font: 500 24px var(--mono); }
+  .space-demo .space-label { color: var(--dim); letter-spacing: .08em; }
+  .space-demo code { color: var(--paper); font: inherit; }
+  .space-demo code b { color: var(--hot); font-weight: 700; }
+  .space-demo .space-arrow { color: var(--hot); font-size: 32px; }
+  .space-demo strong { margin-left: auto; color: var(--hot); font-size: 22px; letter-spacing: .04em; }
 
   /* ---- cells / blocks ---- */
   .cells, .blocks { position: relative; display: flex; flex-wrap: wrap; gap: var(--gap); }
@@ -116,16 +123,8 @@
     box-shadow: inset 0 0 0 2px rgba(14, 13, 11, .06);
   }
 
-  /* ---- 3 credits ---- */
-  .credit-quote { position: absolute; left: 850px; top: 510px; width: 960px; font: italic 400 44px/1.3 var(--serif); color: var(--hot); }
+  /* ---- 3 context history ---- */
   .history-explain { position: absolute; left: 110px; top: 270px; width: 1700px; font: 400 32px/1.4 var(--display); }
-  .receipt { position: absolute; left: 110px; top: 330px; width: 620px; padding: 40px 44px 66px; background: var(--paper); color: #1a1814; font: 500 29px/1.65 var(--mono);
-    -webkit-mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 26px 100%; mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 26px 100%; }
-  .receipt .ln { display: flex; justify-content: space-between; opacity: 0; transform: translateY(-8px); transition: opacity .35s, transform .35s; white-space: pre; }
-  .receipt .ln.on { opacity: 1; transform: none; }
-  .receipt .sub { font-size: 22px; color: #6a6354; line-height: 1.3; margin-bottom: 4px; }
-  .receipt .rule { border-top: 3px dashed #1a1814; margin: 10px 0; opacity: 0; transition: opacity .35s; } .receipt .rule.on { opacity: 1; }
-  .receipt .tot { font: 700 44px/1.5 var(--mono); } .receipt .hot { color: #d8400b; }
   .chart { position: absolute; left: 110px; top: 350px; width: 1700px; }
   .chart h3 { font: 500 24px var(--mono); color: var(--dim); margin-bottom: 110px; opacity: 0; transition: opacity .6s; }
   .chart h3.on { opacity: 1; }
@@ -253,7 +252,7 @@ const LAYERS = [
   { k: "hist", n: "Conversation history", c: "#2fc4d6" }, { k: "files", n: "Retrieved files", c: "#f2c94c" },
   { k: "user", n: "What you typed", c: "#ff5a1f" }
 ];
-const START = { sys: 700, tools: 900, hist: 1200, files: 1800, user: 11, out: 300, think: 500, mult: 1, cache: false };
+const START = { sys: 700, tools: 900, hist: 1200, files: 1800, user: 12, out: 300, think: 500, mult: 1, cache: false };
 const inTok = s => s.sys + s.tools + s.hist + s.files + s.user;
 const cachedTok = s => s.cache ? s.sys + s.tools : 0;
 const outTok = s => s.out + s.think;
@@ -288,17 +287,19 @@ const SC = [
   },
   { // 1 · tokens
     html: () => `<div class="tag">01 &nbsp;Tokens</div><div class="plabel">PROMPT</div><div class="pbox"></div><div class="sentence" id="sen"></div>
+      <div class="space-demo"><strong>THE EXTRA SPACE BETWEEN “THIS” AND “QUARTER” IS TOKEN 10</strong></div>
       <div class="count"><span id="cnt">0</span><small>tokens</small></div>
       <div class="note">split as in OpenAI's o200k tokenizer &nbsp;·&nbsp; other models split differently</div>`,
     init() {
-      this.parts = ["Summ", "ar", "ize", " Cald", "ova", "'s", " Azure", " growth", " this", " quarter", "."];
+      this.parts = ["Summ", "ar", "ize", " Cald", "ova", "'s", " Azure", " growth", " this", " ", " quarter", "."];
       $("#sen").innerHTML = this.parts.map(p => `<span class="t">${p}<i></i></span>`).join("");
     },
     steps: [
       function () { // cut the sentence into tokens
         const sen = $("#sen"), p = SC[1].parts;
         p.forEach((t, i) => T(() => {
-          const s = sen.children[i]; s.firstChild.nodeValue = t.trim(); s.querySelector("i").textContent = i + 1;
+          const s = sen.children[i]; s.firstChild.nodeValue = t === " " ? "·" : t.trim();
+          s.classList.toggle("space-token", t === " "); s.querySelector("i").textContent = i + 1;
           s.classList.add("cut"); $("#cnt").textContent = i + 1;
         }, i * 260));
       }
@@ -340,32 +341,15 @@ const SC = [
       ];
     })()
   },
-  { // 3 · credits
-    html: () => `<div class="tag">03 &nbsp;Credits</div>
-      <h2>From tokens to <em>credits.</em></h2>
-      <div class="receipt" id="rc">
-        <div class="ln"><span>INPUT</span><span>${fmt(inTok(START))} tok</span></div><div class="ln"><span>&nbsp;&nbsp;credits / 1k</span><span>1</span></div>
-        <div class="ln"><span>OUTPUT</span><span>800 tok</span></div><div class="ln sub"><span>&nbsp;&nbsp;300 shown + 500 reasoning</span><span></span></div>
-        <div class="ln"><span>&nbsp;&nbsp;credits / 1k</span><span class="hot">4</span></div><div class="ln"><span>MODEL TIER</span><span>×1.0</span></div><div class="rule"></div>
-        <div class="ln tot"><span>CREDITS</span><span class="hot" id="rt">0.00</span></div>
-      </div>
-      <blockquote class="credit-quote rv" id="cq">Credits are your service's usage units.</blockquote>
-      <div class="note">illustrative rates, not a price list</div>`,
-    init() {},
-    steps: [
-      () => { $$("#rc > *").forEach((e, i) => T(() => on(e), i * 380)); T(() => count($("#rt"), cost(START), 1200, 2), 7 * 380); },
-      () => on($("#cq"))
-    ]
-  },
-  { // 4 · context history
-    html: () => `<div class="tag">04 &nbsp;Context history</div>
+  { // 3 · context history
+    html: () => `<div class="tag">03 &nbsp;Context history</div>
       <h2>More conversation. <em>More input.</em></h2>
       <div class="history-explain rv" id="he">Every next turn carries the previous answer + prompt.</div>
       <div class="chart"><h3 id="ch">INPUT TOKENS PER TURN</h3>
         <div class="cols" id="cols"></div><div class="labels" id="lbls"></div>
         <div class="key" id="key"><span><i style="background:#6a6354"></i>starting context</span><span><i style="background:#b3a78b"></i>earlier prompts + answers</span><span><i style="background:var(--hot)"></i>current prompt</span></div>
-        <div class="callout" id="co">Same prompt + response length. +47% input by turn 8.</div></div>
-      <div class="note">example: +11 prompt +300 answer per turn; history retained; hidden reasoning excluded</div>`,
+        <div class="callout" id="co">Same prompt- and responselength. +47% input by turn 8.</div></div>
+      <div class="note">example: +12 prompt +300 answer per turn; history retained; hidden reasoning excluded</div>`,
     init() {
       const T8 = 8, base = inTok(START) - START.user, add = START.user + START.out, max = base + add * (T8 - 1) + START.user;
       $("#cols").innerHTML = Array.from({ length: T8 }, (_, i) => {
@@ -388,14 +372,14 @@ const SC = [
     ]
   },
   {
-    html: () => `<div class="tag">05 &nbsp;From understanding to action</div>
+    html: () => `<div class="tag">04 &nbsp;From understanding to action</div>
       <p class="chapter-recap">Now you know what adds up.</p>
       <h2 class="chapter-title rv" id="optimise-intro">Let's <em>optimise.</em></h2>`,
     init() {},
     steps: [() => on($("#optimise-intro"))]
   },
-  { // 6 · optimise
-    html: () => `<div class="tag">06 &nbsp;Optimise</div>
+  { // 5 · optimise
+    html: () => `<div class="tag">05 &nbsp;Optimise</div>
       <h2>Same answer.<br><em>Lighter</em> request.</h2>
       <div class="l4"><div class="input-label">REQUEST CONTEXT (INPUT)</div><div class="g4 cells" id="g4"></div>${legendHTML()}
         <div class="out4"><div class="lbl">ANSWER + REASONING (OUTPUT)</div><div class="blocks" id="b4"></div></div></div>
@@ -421,7 +405,7 @@ const SC = [
     },
     steps: (() => {
       const lever = (i, mut) => () => {
-        const sc = SC[6], li = $$("#lv li"); li.forEach(e => e.classList.remove("now")); li[i].classList.add("on", "now");
+        const sc = SC[5], li = $$("#lv li"); li.forEach(e => e.classList.remove("now")); li[i].classList.add("on", "now");
         const before = { ...sc.s };
         mut(sc.s);
         $$(".l4 .optimizing").forEach(el => el.classList.remove("optimizing"));
@@ -444,8 +428,8 @@ const SC = [
       ];
     })()
   },
-  { // 7 · effort comparison
-    html: () => `<div class="tag">07 &nbsp;Effort</div>
+  { // 6 · effort comparison
+    html: () => `<div class="tag">06 &nbsp;Effort</div>
       <h2>Same prompt. <em>Different effort.</em></h2>
       <p class="effort-prompt"><span>ONE PROMPT · OPUS 5.5 · 3 OF 4 LEVELS</span>"Build a personal fitness and workout tracker app"</p>
       <div class="effort-results">
@@ -461,8 +445,8 @@ const SC = [
       () => on($("#effort-message"))
     ]
   },
-  { // 8 · right model for the task
-    html: () => `<div class="tag">08 &nbsp;Model choice</div>
+  { // 7 · right model for the task
+    html: () => `<div class="tag">07 &nbsp;Model choice</div>
       <h2>Right model. <em>Right task.</em></h2>
       <div class="tiers">
         <div class="tier t-small rv" id="tier-small"><h3>Small</h3><div class="tag-line">FAST · CHEAP · NARROW</div><div class="cost">$</div>
@@ -487,8 +471,8 @@ const SC = [
       () => on($("#tier-small")), () => on($("#tier-mid")), () => on($("#tier-big")), () => on($("#tier-router")), () => on($("#tiers-message"))
     ]
   },
-  { // 9 · takeaway
-    html: () => `<div class="tag">09 &nbsp;Takeaway</div>
+  { // 8 · takeaway
+    html: () => `<div class="tag">08 &nbsp;Takeaway</div>
       <div class="three"><div>Send less.</div><div><span class="accent">Spend where</span> it matters.</div></div>`,
     init() {},
     steps: [

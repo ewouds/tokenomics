@@ -5,3 +5,4 @@ numpy
 anthropic
 pytest
 jinja2
+python-dotenv
